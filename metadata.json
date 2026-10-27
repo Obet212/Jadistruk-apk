@@ -1,0 +1,6 @@
+{
+  "name": "JADISTRUK",
+  "description": "Aplikasi konversi struk transfer bank dengan deteksi multi-area OCR otomatis dan pencetakan thermal Bluetooth.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
