@@ -16,3 +16,15 @@
 local.properties
 .env
 debug.keystore
+debug.keystore.base64
+/build
+app/build
+APK_DOWNLOAD
+*.apk
+*.zip
+*.dat
+/tmp
+.aistudio
+.build-outputs
+
+
