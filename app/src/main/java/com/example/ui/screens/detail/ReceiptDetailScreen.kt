@@ -526,16 +526,22 @@ fun ReceiptDetailScreen(
               Text(
                 text = "Lebar Kertas Thermal:",
                 style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
+                softWrap = false,
+                maxLines = 1
               )
-              Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+              Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+              ) {
                 FilterChip(
                   selected = previewPaperWidth == 58,
                   onClick = {
                     previewPaperWidth = 58
                     onSaveSettings(activeSettings.copy(paperWidthMm = 58))
                   },
-                  label = { Text("58 mm (32 kol)") }
+                  label = { Text("58 mm (32 kol)", softWrap = false, maxLines = 1) }
                 )
                 FilterChip(
                   selected = previewPaperWidth == 80,
@@ -543,7 +549,7 @@ fun ReceiptDetailScreen(
                     previewPaperWidth = 80
                     onSaveSettings(activeSettings.copy(paperWidthMm = 80))
                   },
-                  label = { Text("80 mm (48 kol)") }
+                  label = { Text("80 mm (48 kol)", softWrap = false, maxLines = 1) }
                 )
               }
             }
@@ -601,11 +607,18 @@ fun ReceiptDetailScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
           ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+              modifier = Modifier
+                .weight(1f, fill = false)
+                .horizontalScroll(rememberScrollState()),
+              verticalAlignment = Alignment.CenterVertically
+            ) {
               Text(
                 text = "Pratinjau Hasil Cetak",
                 style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
+                softWrap = false,
+                maxLines = 1
               )
               Spacer(modifier = Modifier.width(8.dp))
               Surface(
@@ -616,21 +629,28 @@ fun ReceiptDetailScreen(
                   text = "${selectedTheme.displayName} • ${previewPaperWidth}mm",
                   modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                   style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-                  color = MaterialTheme.colorScheme.onPrimaryContainer
+                  color = MaterialTheme.colorScheme.onPrimaryContainer,
+                  softWrap = false,
+                  maxLines = 1
                 )
               }
             }
 
-            TextButton(
+            IconButton(
               onClick = {
                 clipboardManager.setText(AnnotatedString(formattedReceiptText))
                 Toast.makeText(context, "Teks struk berhasil disalin!", Toast.LENGTH_SHORT).show()
               },
-              contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+              modifier = Modifier
+                .size(40.dp)
+                .testTag("btn_copy_receipt")
             ) {
-              Icon(Icons.Filled.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
-              Spacer(modifier = Modifier.width(4.dp))
-              Text("Salin", style = MaterialTheme.typography.labelSmall)
+              Icon(
+                imageVector = Icons.Filled.ContentCopy,
+                contentDescription = "Salin Struk",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp)
+              )
             }
           }
 

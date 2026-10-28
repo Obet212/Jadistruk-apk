@@ -496,20 +496,27 @@ fun SettingsScreen(
             Text(
               text = "Ukuran Kertas Standar:",
               style = MaterialTheme.typography.labelMedium,
-              color = MaterialTheme.colorScheme.onSurfaceVariant
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              softWrap = false,
+              maxLines = 1
             )
             Spacer(modifier = Modifier.height(6.dp))
 
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+              modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+              horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
               FilterChip(
                 selected = paperWidthMm == 58,
                 onClick = { paperWidthMm = 58 },
-                label = { Text("58 mm (32 kolom)") }
+                label = { Text("58 mm (32 kolom)", softWrap = false, maxLines = 1) }
               )
               FilterChip(
                 selected = paperWidthMm == 80,
                 onClick = { paperWidthMm = 80 },
-                label = { Text("80 mm (48 kolom)") }
+                label = { Text("80 mm (48 kolom)", softWrap = false, maxLines = 1) }
               )
             }
 
@@ -666,14 +673,24 @@ fun SettingsScreen(
 
             // Jumlah Baris Feed
             Spacer(modifier = Modifier.height(8.dp))
-            Text("Jarak Baris Kertas Setelah Cetak (Feed Lines):", style = MaterialTheme.typography.labelMedium)
+            Text(
+              text = "Jarak Baris Kertas Setelah Cetak (Feed Lines):",
+              style = MaterialTheme.typography.labelMedium,
+              softWrap = false,
+              maxLines = 1
+            )
             Spacer(modifier = Modifier.height(6.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+              modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+              horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
               listOf(1, 2, 3, 4).forEach { lines ->
                 FilterChip(
                   selected = printFeedLines == lines,
                   onClick = { printFeedLines = lines },
-                  label = { Text("$lines Baris") }
+                  label = { Text("$lines Baris", softWrap = false, maxLines = 1) }
                 )
               }
             }
