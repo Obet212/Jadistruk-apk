@@ -40,6 +40,7 @@ import androidx.compose.material.icons.filled.BluetoothDisabled
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.Refresh
@@ -89,6 +90,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.example.data.model.PrintSettings
 import com.example.data.model.Receipt
+import com.example.data.model.ReceiptTheme
 import com.example.data.ocr.FieldValidator
 import com.example.data.printer.BluetoothPrinterDevice
 import com.example.data.printer.PrintResult
@@ -120,6 +122,7 @@ fun ReceiptDetailScreen(
   val clipboardManager = LocalClipboardManager.current
   val coroutineScope = rememberCoroutineScope()
   var previewPaperWidth by remember { mutableIntStateOf(settings.paperWidthMm) }
+  var selectedTheme by remember(settings.receiptTheme) { mutableStateOf(settings.receiptTheme) }
 
   // Printing state
   var isPrinting by remember { mutableStateOf(false) }
@@ -141,7 +144,10 @@ fun ReceiptDetailScreen(
     onBack()
   }
 
-  val activeSettings = settings.copy(paperWidthMm = previewPaperWidth)
+  val activeSettings = settings.copy(
+    paperWidthMm = previewPaperWidth,
+    receiptTheme = selectedTheme
+  )
   val formattedReceiptText = remember(receipt, activeSettings) {
     ReceiptFormatter.formatText(receipt, activeSettings)
   }
@@ -221,6 +227,7 @@ fun ReceiptDetailScreen(
         return@checkAndRequestPermissionsThen
       }
 
+      onSaveSettings(activeSettings)
       isPrinting = true
       onPrintBluetooth(receipt) { result ->
         isPrinting = false
@@ -354,29 +361,192 @@ fun ReceiptDetailScreen(
         }
       }
 
-      // 2. Paper size switcher (58mm vs 80mm)
+      // 2. PENGATURAN PILIHAN TEMPLATE STRUK (3 TEMA)
       item {
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.SpaceBetween,
-          verticalAlignment = Alignment.CenterVertically
+        Card(
+          modifier = Modifier
+            .fillMaxWidth()
+            .testTag("receipt_theme_selector_card"),
+          shape = RoundedCornerShape(14.dp),
+          colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+          elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
         ) {
-          Text(
-            text = "Lebar Kertas Thermal:",
-            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-            color = MaterialTheme.colorScheme.onSurface
-          )
-          Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilterChip(
-              selected = previewPaperWidth == 58,
-              onClick = { previewPaperWidth = 58 },
-              label = { Text("58 mm (32 kol)") }
-            )
-            FilterChip(
-              selected = previewPaperWidth == 80,
-              onClick = { previewPaperWidth = 80 },
-              label = { Text("80 mm (48 kol)") }
-            )
+          Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+              modifier = Modifier.fillMaxWidth(),
+              verticalAlignment = Alignment.CenterVertically
+            ) {
+              Box(
+                modifier = Modifier
+                  .size(36.dp)
+                  .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+                contentAlignment = Alignment.Center
+              ) {
+                Icon(
+                  imageVector = Icons.Filled.Palette,
+                  contentDescription = null,
+                  tint = MaterialTheme.colorScheme.primary,
+                  modifier = Modifier.size(20.dp)
+                )
+              }
+              Spacer(modifier = Modifier.width(10.dp))
+              Column(modifier = Modifier.weight(1f)) {
+                Text(
+                  text = "Pilihan Template Struk",
+                  style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                  color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                  text = "Pilih tema tampilan & format sebelum mencetak",
+                  style = MaterialTheme.typography.bodySmall,
+                  color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+              }
+              Surface(
+                shape = RoundedCornerShape(6.dp),
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+              ) {
+                Text(
+                  text = selectedTheme.displayName,
+                  modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                  style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                  color = MaterialTheme.colorScheme.primary
+                )
+              }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // 3 Tombol Pilihan Tema
+            Row(
+              modifier = Modifier.fillMaxWidth(),
+              horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+              ReceiptTheme.entries.forEach { theme ->
+                val isSelected = selectedTheme == theme
+                Card(
+                  modifier = Modifier
+                    .weight(1f)
+                    .clickable {
+                      selectedTheme = theme
+                      val updated = activeSettings.copy(receiptTheme = theme)
+                      onSaveSettings(updated)
+                    }
+                    .testTag("theme_chip_${theme.id}"),
+                  shape = RoundedCornerShape(10.dp),
+                  colors = CardDefaults.cardColors(
+                    containerColor = if (isSelected) {
+                      MaterialTheme.colorScheme.primaryContainer
+                    } else {
+                      MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                    }
+                  ),
+                  border = BorderStroke(
+                    width = if (isSelected) 1.5.dp else 1.dp,
+                    color = if (isSelected) {
+                      MaterialTheme.colorScheme.primary
+                    } else {
+                      MaterialTheme.colorScheme.outlineVariant
+                    }
+                  )
+                ) {
+                  Column(
+                    modifier = Modifier
+                      .fillMaxWidth()
+                      .padding(vertical = 10.dp, horizontal = 6.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                  ) {
+                    Text(
+                      text = theme.displayName,
+                      style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                      color = if (isSelected) {
+                        MaterialTheme.colorScheme.onPrimaryContainer
+                      } else {
+                        MaterialTheme.colorScheme.onSurface
+                      }
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                      text = when (theme) {
+                        ReceiptTheme.SEDERHANA -> "Minimalis"
+                        ReceiptTheme.PROFESIONAL -> "Resmi Bank"
+                        ReceiptTheme.MODERN -> "Kekinian"
+                      },
+                      style = MaterialTheme.typography.labelSmall,
+                      color = if (isSelected) {
+                        MaterialTheme.colorScheme.primary
+                      } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                      }
+                    )
+                  }
+                }
+              }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Keterangan Tema Terpilih
+            Card(
+              modifier = Modifier.fillMaxWidth(),
+              shape = RoundedCornerShape(8.dp),
+              colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.35f)
+              )
+            ) {
+              Row(
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .padding(10.dp),
+                verticalAlignment = Alignment.CenterVertically
+              ) {
+                Icon(
+                  imageVector = Icons.Filled.Info,
+                  contentDescription = null,
+                  tint = MaterialTheme.colorScheme.secondary,
+                  modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                  text = "${selectedTheme.tagLine}: ${selectedTheme.description}",
+                  style = MaterialTheme.typography.bodySmall,
+                  color = MaterialTheme.colorScheme.onSurface
+                )
+              }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Pengaturan Lebar Kertas
+            Row(
+              modifier = Modifier.fillMaxWidth(),
+              horizontalArrangement = Arrangement.SpaceBetween,
+              verticalAlignment = Alignment.CenterVertically
+            ) {
+              Text(
+                text = "Lebar Kertas Thermal:",
+                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
+                color = MaterialTheme.colorScheme.onSurface
+              )
+              Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(
+                  selected = previewPaperWidth == 58,
+                  onClick = {
+                    previewPaperWidth = 58
+                    onSaveSettings(activeSettings.copy(paperWidthMm = 58))
+                  },
+                  label = { Text("58 mm (32 kol)") }
+                )
+                FilterChip(
+                  selected = previewPaperWidth == 80,
+                  onClick = {
+                    previewPaperWidth = 80
+                    onSaveSettings(activeSettings.copy(paperWidthMm = 80))
+                  },
+                  label = { Text("80 mm (48 kol)") }
+                )
+              }
+            }
           }
         }
       }
@@ -421,31 +591,73 @@ fun ReceiptDetailScreen(
         }
       }
 
-      // 4. Simulated Thermal Paper Card (Teks mendatar rapi menyamping, dilarang dibungkus)
+      // 4. Simulated Thermal Paper Card dengan Header Pratinjau
       item {
-        Card(
-          modifier = Modifier
-            .fillMaxWidth()
-            .testTag("thermal_paper_card"),
-          shape = RoundedCornerShape(8.dp),
-          colors = CardDefaults.cardColors(containerColor = ReceiptPaperBg),
-          border = BorderStroke(1.dp, ReceiptBorder),
-          elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-        ) {
-          Box(
+        Column(modifier = Modifier.fillMaxWidth()) {
+          Row(
             modifier = Modifier
               .fillMaxWidth()
-              .horizontalScroll(rememberScrollState())
-              .padding(18.dp)
+              .padding(horizontal = 4.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
           ) {
-            Text(
-              text = formattedReceiptText,
-              fontFamily = FontFamily.Monospace,
-              fontSize = if (previewPaperWidth == 80) 11.sp else 12.sp,
-              lineHeight = if (previewPaperWidth == 80) 16.sp else 18.sp,
-              color = ReceiptText,
-              softWrap = false
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+              Text(
+                text = "Pratinjau Hasil Cetak",
+                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                color = MaterialTheme.colorScheme.onSurface
+              )
+              Spacer(modifier = Modifier.width(8.dp))
+              Surface(
+                shape = RoundedCornerShape(4.dp),
+                color = MaterialTheme.colorScheme.primaryContainer
+              ) {
+                Text(
+                  text = "${selectedTheme.displayName} • ${previewPaperWidth}mm",
+                  modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                  style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                  color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+              }
+            }
+
+            TextButton(
+              onClick = {
+                clipboardManager.setText(AnnotatedString(formattedReceiptText))
+                Toast.makeText(context, "Teks struk berhasil disalin!", Toast.LENGTH_SHORT).show()
+              },
+              contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+            ) {
+              Icon(Icons.Filled.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
+              Spacer(modifier = Modifier.width(4.dp))
+              Text("Salin", style = MaterialTheme.typography.labelSmall)
+            }
+          }
+
+          Card(
+            modifier = Modifier
+              .fillMaxWidth()
+              .testTag("thermal_paper_card"),
+            shape = RoundedCornerShape(8.dp),
+            colors = CardDefaults.cardColors(containerColor = ReceiptPaperBg),
+            border = BorderStroke(1.dp, ReceiptBorder),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+          ) {
+            Box(
+              modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+                .padding(18.dp)
+            ) {
+              Text(
+                text = formattedReceiptText,
+                fontFamily = FontFamily.Monospace,
+                fontSize = if (previewPaperWidth == 80) 11.sp else 12.sp,
+                lineHeight = if (previewPaperWidth == 80) 16.sp else 18.sp,
+                color = ReceiptText,
+                softWrap = false
+              )
+            }
           }
         }
       }

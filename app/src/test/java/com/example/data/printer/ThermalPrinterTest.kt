@@ -116,4 +116,61 @@ class ThermalPrinterTest {
     assertEquals("00:11:22:33:44:55", connected.address)
     assertEquals("Timeout", error.title)
   }
+
+  @Test
+  fun testReceiptFormattingSederhana() {
+    val receipt = Receipt(
+      id = 103,
+      recipientBank = "BRI",
+      recipientAccount = "0987654321",
+      recipientName = "AHMAD FAUZI",
+      amount = 250000,
+      adminFee = 2500,
+      transactionDate = "25/10/2026 16:00 WIB"
+    )
+    val settings = PrintSettings(
+      paperWidthMm = 58,
+      receiptTheme = com.example.data.model.ReceiptTheme.SEDERHANA,
+      storeName = "KASIR KITA"
+    )
+    val text = ReceiptFormatter.formatText(receipt, settings)
+
+    assertTrue(text.contains("KASIR KITA"))
+    assertTrue(text.contains("BUKTI TRANSFER"))
+    assertTrue(text.contains("BRI"))
+    assertTrue(text.contains("AHMAD FAUZI"))
+    assertTrue(text.contains("Rp 250.000"))
+    assertTrue(text.contains("Rp 2.500"))
+    assertTrue(text.contains("Rp 252.500"))
+  }
+
+  @Test
+  fun testReceiptFormattingModern() {
+    val receipt = Receipt(
+      id = 104,
+      recipientBank = "DANA",
+      recipientAccount = "081299887766",
+      recipientName = "DEWI LESTARI",
+      amount = 750000,
+      adminFee = 2000,
+      transactionDate = "25/10/2026 17:00 WIB"
+    )
+    val settings = PrintSettings(
+      paperWidthMm = 58,
+      receiptTheme = com.example.data.model.ReceiptTheme.MODERN,
+      storeName = "DIGITAL MART"
+    )
+    val text = ReceiptFormatter.formatText(receipt, settings)
+
+    assertTrue(text.contains("★ DIGITAL MART ★"))
+    assertTrue(text.contains(">>> BUKTI TRANSFER DIGITAL <<<"))
+    assertTrue(text.contains("## INFORMASI PENERIMA ##"))
+    assertTrue(text.contains("## RINCIAN BIAYA ##"))
+    assertTrue(text.contains("DANA"))
+    assertTrue(text.contains("DEWI LESTARI"))
+    assertTrue(text.contains("Rp 750.000"))
+    assertTrue(text.contains("Rp 2.000"))
+    assertTrue(text.contains("TOTAL BAYAR"))
+    assertTrue(text.contains("Rp 752.000"))
+  }
 }

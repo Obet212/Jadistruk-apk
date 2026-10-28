@@ -15,4 +15,5 @@ data class PrintSettings(
   val selectedPrinterName: String = "",
   val autoCutPaper: Boolean = true,
   val printFeedLines: Int = 3,
+  val receiptTheme: ReceiptTheme = ReceiptTheme.PROFESIONAL,
 )

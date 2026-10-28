@@ -1,6 +1,7 @@
 package com.example.ui.screens.settings
 
 import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -66,8 +67,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.filled.Palette
 import com.example.data.model.AdminFeeRule
 import com.example.data.model.PrintSettings
+import com.example.data.model.ReceiptTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -87,6 +90,7 @@ fun SettingsScreen(
   var showDate by remember(currentSettings) { mutableStateOf(currentSettings.showDate) }
   var showRefNumber by remember(currentSettings) { mutableStateOf(currentSettings.showRefNumber) }
   var autoAddHeader by remember(currentSettings) { mutableStateOf(currentSettings.autoAddHeader) }
+  var receiptTheme by remember(currentSettings) { mutableStateOf(currentSettings.receiptTheme) }
 
   // Admin Fee Tier / Range Rules states
   var autoApplyAdminFee by remember(currentSettings) { mutableStateOf(currentSettings.autoApplyAdminFee) }
@@ -424,6 +428,72 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(12.dp))
 
             Text(
+              text = "Pilihan Template Struk:",
+              style = MaterialTheme.typography.labelMedium,
+              color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Row(
+              modifier = Modifier.fillMaxWidth(),
+              horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+              ReceiptTheme.entries.forEach { theme ->
+                val isSelected = receiptTheme == theme
+                Card(
+                  modifier = Modifier
+                    .weight(1f)
+                    .clickable { receiptTheme = theme }
+                    .testTag("settings_theme_card_${theme.id}"),
+                  shape = RoundedCornerShape(10.dp),
+                  colors = CardDefaults.cardColors(
+                    containerColor = if (isSelected) {
+                      MaterialTheme.colorScheme.primaryContainer
+                    } else {
+                      MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                    }
+                  ),
+                  border = BorderStroke(
+                    width = if (isSelected) 1.5.dp else 1.dp,
+                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
+                  )
+                ) {
+                  Column(
+                    modifier = Modifier
+                      .fillMaxWidth()
+                      .padding(vertical = 10.dp, horizontal = 6.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                  ) {
+                    Text(
+                      text = theme.displayName,
+                      style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                      color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                      text = when (theme) {
+                        ReceiptTheme.SEDERHANA -> "Minimalis"
+                        ReceiptTheme.PROFESIONAL -> "Resmi Bank"
+                        ReceiptTheme.MODERN -> "Kekinian"
+                      },
+                      style = MaterialTheme.typography.labelSmall,
+                      color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                  }
+                }
+              }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+              text = "• ${receiptTheme.description}",
+              style = MaterialTheme.typography.bodySmall,
+              color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Text(
               text = "Ukuran Kertas Standar:",
               style = MaterialTheme.typography.labelMedium,
               color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -655,6 +725,7 @@ fun SettingsScreen(
                 selectedPrinterName = selectedPrinterName,
                 autoCutPaper = autoCutPaper,
                 printFeedLines = printFeedLines,
+                receiptTheme = receiptTheme,
               )
             )
             Toast.makeText(context, "Pengaturan struk & printer berhasil disimpan!", Toast.LENGTH_SHORT).show()

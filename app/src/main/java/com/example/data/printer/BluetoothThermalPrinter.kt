@@ -425,9 +425,6 @@ class BluetoothThermalPrinter(private val context: Context) {
    */
   private fun buildEscPosData(receipt: Receipt, settings: PrintSettings): ByteArray {
     val lineWidth = if (settings.paperWidthMm == 80) 48 else 32
-    val dividerDouble = "=".repeat(lineWidth) + "\n"
-    val dividerSingle = "-".repeat(lineWidth) + "\n"
-
     val bytes = ArrayList<Byte>()
     fun add(cmd: ByteArray) { for (b in cmd) bytes.add(b) }
     fun addLine(text: String = "") {
@@ -438,98 +435,264 @@ class BluetoothThermalPrinter(private val context: Context) {
     // 1. Inisialisasi printer
     add(CMD_INIT)
 
-    // 2. Header Toko
-    if (settings.autoAddHeader) {
-      add(CMD_ALIGN_CENTER)
-      if (settings.storeName.isNotBlank()) {
-        add(CMD_BOLD_ON)
-        add(CMD_DOUBLE_HEIGHT_ON)
-        addLine(settings.storeName.uppercase())
-        add(CMD_NORMAL_SIZE)
-        add(CMD_BOLD_OFF)
-      }
+    when (settings.receiptTheme) {
+      com.example.data.model.ReceiptTheme.SEDERHANA -> {
+        val dividerDash = ("- ".repeat(lineWidth / 2 + 1)).take(lineWidth) + "\n"
+        val dividerSolid = "-".repeat(lineWidth) + "\n"
 
-      if (settings.storeAddress.isNotBlank()) {
-        val wrappedAddr = ReceiptFormatter.wrapText(settings.storeAddress, lineWidth)
-        for (line in wrappedAddr) {
-          addLine(line)
+        // Header Ringkas
+        if (settings.autoAddHeader) {
+          add(CMD_ALIGN_CENTER)
+          if (settings.storeName.isNotBlank()) {
+            add(CMD_BOLD_ON)
+            addLine(settings.storeName.uppercase())
+            add(CMD_BOLD_OFF)
+          }
+          if (settings.storePhone.isNotBlank()) {
+            addLine("Telp: ${settings.storePhone}")
+          }
+          addLine(dividerDash)
+        }
+
+        // Judul Struk
+        add(CMD_ALIGN_CENTER)
+        add(CMD_BOLD_ON)
+        addLine("BUKTI TRANSFER")
+        add(CMD_BOLD_OFF)
+        addLine(dividerDash)
+
+        // Data Penerima
+        add(CMD_ALIGN_LEFT)
+        if (receipt.transactionDate.isNotBlank()) {
+          addLine(ReceiptFormatter.twoColumns("Tgl", receipt.transactionDate, lineWidth))
+        }
+        if (receipt.recipientBank.isNotBlank()) {
+          addLine(ReceiptFormatter.twoColumns("Bank", receipt.recipientBank, lineWidth))
+        }
+        if (receipt.recipientAccount.isNotBlank()) {
+          addLine(ReceiptFormatter.twoColumns("No.Rek", receipt.recipientAccount, lineWidth))
+        }
+        if (receipt.recipientName.isNotBlank()) {
+          addLine(ReceiptFormatter.twoColumns("Penerima", receipt.recipientName, lineWidth))
+        }
+
+        addLine(dividerSolid)
+
+        // Finansial
+        addLine(ReceiptFormatter.twoColumns("Jumlah", receipt.formattedAmount, lineWidth))
+        addLine(ReceiptFormatter.twoColumns("Admin", receipt.formattedAdminFee, lineWidth))
+        addLine(dividerSolid)
+
+        add(CMD_BOLD_ON)
+        addLine(ReceiptFormatter.twoColumns("TOTAL", receipt.formattedTotal, lineWidth))
+        add(CMD_BOLD_OFF)
+
+        if (settings.showRefNumber && receipt.refNumber.isNotBlank()) {
+          addLine(ReceiptFormatter.twoColumns("Ref", receipt.refNumber, lineWidth))
+        }
+        if (receipt.notes.isNotBlank()) {
+          addLine(ReceiptFormatter.twoColumns("Ket", receipt.notes, lineWidth))
+        }
+
+        addLine(dividerDash)
+
+        // Footer
+        add(CMD_ALIGN_CENTER)
+        if (settings.footerMessage.isNotBlank()) {
+          for (line in settings.footerMessage.lines()) {
+            val trimmed = line.trim()
+            if (trimmed.isNotBlank()) {
+              val wrapped = ReceiptFormatter.wrapText(trimmed, lineWidth)
+              for (w in wrapped) addLine(w)
+            }
+          }
+        } else {
+          addLine("Terima Kasih")
         }
       }
 
-      if (settings.storePhone.isNotBlank()) {
-        addLine("Telp/WA: ${settings.storePhone}")
-      }
+      com.example.data.model.ReceiptTheme.PROFESIONAL -> {
+        val dividerDouble = "=".repeat(lineWidth) + "\n"
+        val dividerSingle = "-".repeat(lineWidth) + "\n"
 
-      addLine(dividerDouble)
-    }
+        // Header Toko Formal
+        if (settings.autoAddHeader) {
+          add(CMD_ALIGN_CENTER)
+          if (settings.storeName.isNotBlank()) {
+            add(CMD_BOLD_ON)
+            add(CMD_DOUBLE_HEIGHT_ON)
+            addLine(settings.storeName.uppercase())
+            add(CMD_NORMAL_SIZE)
+            add(CMD_BOLD_OFF)
+          }
+          if (settings.storeAddress.isNotBlank()) {
+            val wrappedAddr = ReceiptFormatter.wrapText(settings.storeAddress, lineWidth)
+            for (line in wrappedAddr) addLine(line)
+          }
+          if (settings.storePhone.isNotBlank()) {
+            addLine("Telp/WA: ${settings.storePhone}")
+          }
+          addLine(dividerDouble)
+        }
 
-    // 3. Judul Struk Bukti Penerima
-    add(CMD_ALIGN_CENTER)
-    add(CMD_BOLD_ON)
-    addLine("STRUK BUKTI PENERIMA")
-    add(CMD_BOLD_OFF)
-    addLine(dividerSingle)
+        // Judul Struk Formal & Status
+        add(CMD_ALIGN_CENTER)
+        add(CMD_BOLD_ON)
+        addLine("STRUK BUKTI PENERIMA")
+        add(CMD_BOLD_OFF)
+        addLine("[ STATUS: TRANSAKSI BERHASIL ]")
+        addLine(dividerSingle)
 
-    // 4. Baris Data Transaksi Penerima
-    add(CMD_ALIGN_LEFT)
+        // Baris Data Transaksi
+        add(CMD_ALIGN_LEFT)
+        if (receipt.transactionDate.isNotBlank()) {
+          addLine(ReceiptFormatter.twoColumns("Waktu Transaksi", receipt.transactionDate, lineWidth))
+        }
+        if (receipt.recipientBank.isNotBlank()) {
+          addLine(ReceiptFormatter.twoColumns("Bank Penyelenggara", receipt.recipientBank, lineWidth))
+        }
+        if (receipt.recipientAccount.isNotBlank()) {
+          addLine(ReceiptFormatter.twoColumns("No. Rekening/HP", receipt.recipientAccount, lineWidth))
+        }
+        if (receipt.recipientName.isNotBlank()) {
+          addLine(ReceiptFormatter.twoColumns("Nama Penerima", receipt.recipientName, lineWidth))
+        }
 
-    if (receipt.transactionDate.isNotBlank()) {
-      addLine(ReceiptFormatter.twoColumns("Waktu", receipt.transactionDate, lineWidth))
-    }
+        addLine(dividerSingle)
 
-    if (receipt.recipientBank.isNotBlank()) {
-      addLine(ReceiptFormatter.twoColumns("Bank Tujuan", receipt.recipientBank, lineWidth))
-    }
+        // Nominal & Admin
+        addLine(ReceiptFormatter.twoColumns("Nominal Transfer", receipt.formattedAmount, lineWidth))
+        addLine(ReceiptFormatter.twoColumns("Biaya Layanan Admin", receipt.formattedAdminFee, lineWidth))
+        addLine(dividerSingle)
 
-    if (receipt.recipientAccount.isNotBlank()) {
-      addLine(ReceiptFormatter.twoColumns("No. Rek/HP", receipt.recipientAccount, lineWidth))
-    }
+        // TOTAL (Penebalan & Ukuran Jelas)
+        add(CMD_BOLD_ON)
+        addLine(ReceiptFormatter.twoColumns("TOTAL PEMBAYARAN", receipt.formattedTotal, lineWidth))
+        add(CMD_BOLD_OFF)
 
-    if (receipt.recipientName.isNotBlank()) {
-      addLine(ReceiptFormatter.twoColumns("Penerima", receipt.recipientName, lineWidth))
-    }
+        if (settings.showRefNumber && receipt.refNumber.isNotBlank()) {
+          addLine(ReceiptFormatter.twoColumns("No. Referensi Bank", receipt.refNumber, lineWidth))
+        }
+        if (receipt.notes.isNotBlank()) {
+          addLine(ReceiptFormatter.twoColumns("Catatan / Berita", receipt.notes, lineWidth))
+        }
 
-    addLine(dividerSingle)
+        addLine(dividerDouble)
 
-    // 5. Nominal & Admin
-    addLine(ReceiptFormatter.twoColumns("Nominal", receipt.formattedAmount, lineWidth))
-    addLine(ReceiptFormatter.twoColumns("Biaya Admin", receipt.formattedAdminFee, lineWidth))
-
-    addLine(dividerSingle)
-
-    // 6. TOTAL (Penebalan & Ukuran Jelas)
-    add(CMD_BOLD_ON)
-    addLine(ReceiptFormatter.twoColumns("TOTAL", receipt.formattedTotal, lineWidth))
-    add(CMD_BOLD_OFF)
-
-    if (settings.showRefNumber && receipt.refNumber.isNotBlank()) {
-      addLine(ReceiptFormatter.twoColumns("No. Ref", receipt.refNumber, lineWidth))
-    }
-    if (receipt.notes.isNotBlank()) {
-      addLine(ReceiptFormatter.twoColumns("Catatan", receipt.notes, lineWidth))
-    }
-
-    addLine(dividerDouble)
-
-    // 7. Footer
-    if (settings.footerMessage.isNotBlank()) {
-      add(CMD_ALIGN_CENTER)
-      for (rawLine in settings.footerMessage.lines()) {
-        val trimmed = rawLine.trim()
-        if (trimmed.isNotBlank()) {
-          val wrapped = ReceiptFormatter.wrapText(trimmed, lineWidth)
-          for (line in wrapped) {
-            addLine(line)
+        // Footer Resmi
+        add(CMD_ALIGN_CENTER)
+        addLine("Simpan struk ini sebagai bukti pembayaran sah.")
+        if (settings.footerMessage.isNotBlank()) {
+          for (rawLine in settings.footerMessage.lines()) {
+            val trimmed = rawLine.trim()
+            if (trimmed.isNotBlank()) {
+              val wrapped = ReceiptFormatter.wrapText(trimmed, lineWidth)
+              for (line in wrapped) addLine(line)
+            }
           }
         }
       }
+
+      com.example.data.model.ReceiptTheme.MODERN -> {
+        val dividerDots = ("* ".repeat(lineWidth / 2 + 1)).take(lineWidth) + "\n"
+        val dividerLine = "-".repeat(lineWidth) + "\n"
+
+        // Header Modern Berbingkai
+        if (settings.autoAddHeader) {
+          add(CMD_ALIGN_CENTER)
+          addLine(dividerDots)
+          if (settings.storeName.isNotBlank()) {
+            add(CMD_BOLD_ON)
+            add(CMD_DOUBLE_HEIGHT_ON)
+            addLine("★ ${settings.storeName.uppercase()} ★")
+            add(CMD_NORMAL_SIZE)
+            add(CMD_BOLD_OFF)
+          }
+          if (settings.storeAddress.isNotBlank()) {
+            val wrappedAddr = ReceiptFormatter.wrapText(settings.storeAddress, lineWidth)
+            for (line in wrappedAddr) addLine(line)
+          }
+          if (settings.storePhone.isNotBlank()) {
+            addLine("WA/CS: ${settings.storePhone}")
+          }
+          addLine(dividerDots)
+        }
+
+        // Headline Digital Modern
+        add(CMD_ALIGN_CENTER)
+        add(CMD_BOLD_ON)
+        addLine(">>> BUKTI TRANSFER DIGITAL <<<")
+        add(CMD_BOLD_OFF)
+        addLine()
+
+        // Blok Penerima
+        add(CMD_ALIGN_LEFT)
+        add(CMD_BOLD_ON)
+        addLine("## INFORMASI PENERIMA ##")
+        add(CMD_BOLD_OFF)
+        if (receipt.transactionDate.isNotBlank()) {
+          addLine(ReceiptFormatter.twoColumns("Waktu", receipt.transactionDate, lineWidth))
+        }
+        if (receipt.recipientBank.isNotBlank()) {
+          addLine(ReceiptFormatter.twoColumns("Bank/Tujuan", receipt.recipientBank, lineWidth))
+        }
+        if (receipt.recipientAccount.isNotBlank()) {
+          addLine(ReceiptFormatter.twoColumns("ID / No. Rek", receipt.recipientAccount, lineWidth))
+        }
+        if (receipt.recipientName.isNotBlank()) {
+          addLine(ReceiptFormatter.twoColumns("Atas Nama", receipt.recipientName, lineWidth))
+        }
+
+        addLine(dividerLine)
+
+        // Blok Finansial
+        add(CMD_BOLD_ON)
+        addLine("## RINCIAN BIAYA ##")
+        add(CMD_BOLD_OFF)
+        addLine(ReceiptFormatter.twoColumns("Nominal", receipt.formattedAmount, lineWidth))
+        addLine(ReceiptFormatter.twoColumns("Biaya Admin", receipt.formattedAdminFee, lineWidth))
+        addLine(dividerLine)
+
+        // Highlight TOTAL
+        add(CMD_BOLD_ON)
+        add(CMD_DOUBLE_HEIGHT_ON)
+        val totalFormatted = ">>> ${receipt.formattedTotal} <<<"
+        addLine(ReceiptFormatter.twoColumns("TOTAL BAYAR", totalFormatted, lineWidth))
+        add(CMD_NORMAL_SIZE)
+        add(CMD_BOLD_OFF)
+
+        if (settings.showRefNumber && receipt.refNumber.isNotBlank()) {
+          addLine(ReceiptFormatter.twoColumns("Ref ID", receipt.refNumber, lineWidth))
+        }
+        if (receipt.notes.isNotBlank()) {
+          addLine(ReceiptFormatter.twoColumns("Catatan", receipt.notes, lineWidth))
+        }
+
+        addLine(dividerDots)
+
+        // Footer Modern
+        add(CMD_ALIGN_CENTER)
+        add(CMD_BOLD_ON)
+        addLine("TERIMA KASIH ATAS KUNJUNGAN ANDA")
+        add(CMD_BOLD_OFF)
+        if (settings.footerMessage.isNotBlank()) {
+          for (rawLine in settings.footerMessage.lines()) {
+            val trimmed = rawLine.trim()
+            if (trimmed.isNotBlank()) {
+              val wrapped = ReceiptFormatter.wrapText(trimmed, lineWidth)
+              for (line in wrapped) addLine(line)
+            }
+          }
+        }
+        addLine("• Powered by JADISTRUK •")
+      }
     }
 
-    // 8. Feed Kertas
+    // Feed Kertas
     val feedLines = settings.printFeedLines.coerceIn(1, 5)
     add(byteArrayOf(0x1B, 0x64, feedLines.toByte()))
 
-    // 9. Auto Cut
+    // Auto Cut
     if (settings.autoCutPaper) {
       add(CMD_CUT_PAPER)
     }

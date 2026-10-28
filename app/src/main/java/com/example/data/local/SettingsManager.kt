@@ -34,6 +34,7 @@ class SettingsManager(context: Context) {
       selectedPrinterName = prefs.getString("printer_name", "") ?: "",
       autoCutPaper = prefs.getBoolean("auto_cut_paper", true),
       printFeedLines = prefs.getInt("print_feed_lines", 3),
+      receiptTheme = com.example.data.model.ReceiptTheme.fromId(prefs.getString("receipt_theme", "profesional")),
     )
   }
 
@@ -53,6 +54,7 @@ class SettingsManager(context: Context) {
       .putString("printer_name", newSettings.selectedPrinterName)
       .putBoolean("auto_cut_paper", newSettings.autoCutPaper)
       .putInt("print_feed_lines", newSettings.printFeedLines)
+      .putString("receipt_theme", newSettings.receiptTheme.id)
       .apply()
     _settings.value = newSettings
   }
