@@ -35,6 +35,11 @@ class ThermalPrinterTest {
 
     assertTrue(text.contains("TOKO JAYA"))
     assertTrue(text.contains("STRUK BUKTI PENERIMA"))
+    // Label "Waktu Transaksi" diubah menjadi "Transaksi"
+    assertTrue(text.contains("Transaksi"))
+    // Bagian teks "Status Transaksi Sukses" telah dihapus
+    assertTrue(!text.contains("Status Transaksi"))
+    assertTrue(!text.contains("TRANSAKSI BERHASIL"))
     assertTrue(text.contains("BCA"))
     assertTrue(text.contains("BUDI SANTOSO"))
     assertTrue(text.contains("Rp 500.000"))
@@ -131,11 +136,14 @@ class ThermalPrinterTest {
     val settings = PrintSettings(
       paperWidthMm = 58,
       receiptTheme = com.example.data.model.ReceiptTheme.SEDERHANA,
-      storeName = "KASIR KITA"
+      storeName = "KASIR KITA",
+      storeAddress = "Jl. Melati No. 12"
     )
     val text = ReceiptFormatter.formatText(receipt, settings)
 
     assertTrue(text.contains("KASIR KITA"))
+    // Alamat toko tampil tepat di bawah nama toko
+    assertTrue(text.contains("Jl. Melati No. 12"))
     assertTrue(text.contains("BUKTI TRANSFER"))
     assertTrue(text.contains("BRI"))
     assertTrue(text.contains("AHMAD FAUZI"))
@@ -162,10 +170,16 @@ class ThermalPrinterTest {
     )
     val text = ReceiptFormatter.formatText(receipt, settings)
 
-    assertTrue(text.contains("★ DIGITAL MART ★"))
-    assertTrue(text.contains(">>> BUKTI TRANSFER DIGITAL <<<"))
-    assertTrue(text.contains("## INFORMASI PENERIMA ##"))
-    assertTrue(text.contains("## RINCIAN BIAYA ##"))
+    // Tanpa simbol dekoratif bintang, panah, atau pagar
+    assertTrue(text.contains("DIGITAL MART"))
+    assertTrue(text.contains("BUKTI TRANSFER DIGITAL"))
+    assertTrue(text.contains("INFORMASI PENERIMA"))
+    assertTrue(text.contains("RINCIAN BIAYA"))
+    assertTrue(!text.contains("★"))
+    assertTrue(!text.contains(">>>"))
+    assertTrue(!text.contains("##"))
+    // Powered by JADISTRUK telah dihapus
+    assertTrue(!text.contains("Powered by JADISTRUK"))
     assertTrue(text.contains("DANA"))
     assertTrue(text.contains("DEWI LESTARI"))
     assertTrue(text.contains("Rp 750.000"))
