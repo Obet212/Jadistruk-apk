@@ -514,9 +514,9 @@ fun SettingsScreen(
                 label = { Text("58 mm (32 kolom)", softWrap = false, maxLines = 1) }
               )
               FilterChip(
-                selected = paperWidthMm == 80,
-                onClick = { paperWidthMm = 80 },
-                label = { Text("80 mm (48 kolom)", softWrap = false, maxLines = 1) }
+                selected = paperWidthMm == 88 || paperWidthMm == 80,
+                onClick = { paperWidthMm = 88 },
+                label = { Text("88 mm (48 kolom)", softWrap = false, maxLines = 1) }
               )
             }
 

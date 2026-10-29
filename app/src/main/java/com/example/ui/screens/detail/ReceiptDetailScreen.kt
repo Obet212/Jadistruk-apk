@@ -541,15 +541,15 @@ fun ReceiptDetailScreen(
                     previewPaperWidth = 58
                     onSaveSettings(activeSettings.copy(paperWidthMm = 58))
                   },
-                  label = { Text("58 mm (32 kol)", softWrap = false, maxLines = 1) }
+                  label = { Text("58 mm (32 kolom)", softWrap = false, maxLines = 1) }
                 )
                 FilterChip(
-                  selected = previewPaperWidth == 80,
+                  selected = previewPaperWidth == 88 || previewPaperWidth == 80,
                   onClick = {
-                    previewPaperWidth = 80
-                    onSaveSettings(activeSettings.copy(paperWidthMm = 80))
+                    previewPaperWidth = 88
+                    onSaveSettings(activeSettings.copy(paperWidthMm = 88))
                   },
-                  label = { Text("80 mm (48 kol)", softWrap = false, maxLines = 1) }
+                  label = { Text("88 mm (48 kolom)", softWrap = false, maxLines = 1) }
                 )
               }
             }
@@ -626,7 +626,7 @@ fun ReceiptDetailScreen(
                 color = MaterialTheme.colorScheme.primaryContainer
               ) {
                 Text(
-                  text = "${selectedTheme.displayName} • ${previewPaperWidth}mm",
+                  text = "${selectedTheme.displayName} • ${if (previewPaperWidth == 88 || previewPaperWidth == 80) "88mm" else "58mm"}",
                   modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                   style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
                   color = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -654,31 +654,15 @@ fun ReceiptDetailScreen(
             }
           }
 
-          Card(
+          // Tampilan Kertas Thermal 100% Identik Hasil Cetak Asli
+          ThermalReceiptPreview(
+            receipt = receipt,
+            settings = activeSettings,
             modifier = Modifier
               .fillMaxWidth()
-              .testTag("thermal_paper_card"),
-            shape = RoundedCornerShape(8.dp),
-            colors = CardDefaults.cardColors(containerColor = ReceiptPaperBg),
-            border = BorderStroke(1.dp, ReceiptBorder),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-          ) {
-            Box(
-              modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState())
-                .padding(18.dp)
-            ) {
-              Text(
-                text = formattedReceiptText,
-                fontFamily = FontFamily.Monospace,
-                fontSize = if (previewPaperWidth == 80) 11.sp else 12.sp,
-                lineHeight = if (previewPaperWidth == 80) 16.sp else 18.sp,
-                color = ReceiptText,
-                softWrap = false
-              )
-            }
-          }
+              .testTag("thermal_paper_card")
+              .padding(top = 4.dp)
+          )
         }
       }
 

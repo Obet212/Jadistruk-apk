@@ -4,270 +4,322 @@ import com.example.data.model.PrintSettings
 import com.example.data.model.Receipt
 import com.example.data.model.ReceiptTheme
 
+/**
+ * Representasi satu baris struk thermal presisi tinggi.
+ * Digunakan bersama oleh mesin pencetakan Bluetooth ESC/POS dan mesin pratinjau thermal 100% identik.
+ */
+data class FormattedLine(
+  val text: String,
+  val isBold: Boolean = false,
+  val isDoubleHeight: Boolean = false,
+  val isCentered: Boolean = false
+)
+
 object ReceiptFormatter {
 
-  fun formatText(receipt: Receipt, settings: PrintSettings): String {
-    val lineWidth = if (settings.paperWidthMm == 80) 48 else 32
+  fun getLineWidth(paperWidthMm: Int): Int {
+    return if (paperWidthMm == 80 || paperWidthMm == 88) 48 else 32
+  }
+
+  /**
+   * Menghasilkan daftar baris terstruktur untuk mesin layout cetak dan pratinjau.
+   */
+  fun getFormattedLines(receipt: Receipt, settings: PrintSettings): List<FormattedLine> {
+    val lineWidth = getLineWidth(settings.paperWidthMm)
 
     return when (settings.receiptTheme) {
-      ReceiptTheme.SEDERHANA -> formatSederhana(receipt, settings, lineWidth)
-      ReceiptTheme.PROFESIONAL -> formatProfesional(receipt, settings, lineWidth)
-      ReceiptTheme.MODERN -> formatModern(receipt, settings, lineWidth)
+      ReceiptTheme.SEDERHANA -> generateSederhanaLines(receipt, settings, lineWidth)
+      ReceiptTheme.PROFESIONAL -> generateProfesionalLines(receipt, settings, lineWidth)
+      ReceiptTheme.MODERN -> generateModernLines(receipt, settings, lineWidth)
     }
+  }
+
+  /**
+   * Menghasilkan teks monospaced utuh dengan lebar kolom absolut (32 atau 48 kolom).
+   */
+  fun formatText(receipt: Receipt, settings: PrintSettings): String {
+    val lineWidth = getLineWidth(settings.paperWidthMm)
+    val lines = getFormattedLines(receipt, settings)
+    val sb = StringBuilder()
+
+    for (line in lines) {
+      if (line.isCentered && line.text.length < lineWidth) {
+        sb.appendLine(centerText(line.text, lineWidth))
+      } else {
+        sb.appendLine(line.text)
+      }
+    }
+    sb.appendLine()
+    return sb.toString()
   }
 
   // =========================================================================
   // 1. TEMA SEDERHANA (Minimalis, Ringkas, Hemat Kertas)
   // =========================================================================
-  private fun formatSederhana(receipt: Receipt, settings: PrintSettings, lineWidth: Int): String {
+  private fun generateSederhanaLines(
+    receipt: Receipt,
+    settings: PrintSettings,
+    lineWidth: Int
+  ): List<FormattedLine> {
+    val list = mutableListOf<FormattedLine>()
     val dividerDash = makeRepeatedPattern("- ", lineWidth)
     val dividerSolid = "-".repeat(lineWidth)
-    val sb = StringBuilder()
 
     // 1. Header Ringkas
     if (settings.autoAddHeader) {
       if (settings.storeName.isNotBlank()) {
         val wrapped = wrapText(settings.storeName.uppercase(), lineWidth)
-        for (line in wrapped) {
-          sb.appendLine(centerText(line, lineWidth))
+        for (w in wrapped) {
+          list.add(FormattedLine(text = w, isBold = true, isCentered = true))
         }
       }
       if (settings.storePhone.isNotBlank()) {
-        sb.appendLine(centerText("Telp: ${settings.storePhone}", lineWidth))
+        list.add(FormattedLine(text = "Telp: ${settings.storePhone}", isCentered = true))
       }
-      sb.appendLine(dividerDash)
+      list.add(FormattedLine(text = dividerDash))
     }
 
     // 2. Judul Struk
-    sb.appendLine(centerText("BUKTI TRANSFER", lineWidth))
-    sb.appendLine(dividerDash)
+    list.add(FormattedLine(text = "BUKTI TRANSFER", isBold = true, isCentered = true))
+    list.add(FormattedLine(text = dividerDash))
 
     // 3. Data Penerima
     if (receipt.transactionDate.isNotBlank()) {
-      sb.appendLine(twoColumns("Tgl", receipt.transactionDate, lineWidth))
+      list.add(FormattedLine(text = twoColumns("Tgl", receipt.transactionDate, lineWidth)))
     }
     if (receipt.recipientBank.isNotBlank()) {
-      sb.appendLine(twoColumns("Bank", receipt.recipientBank, lineWidth))
+      list.add(FormattedLine(text = twoColumns("Bank", receipt.recipientBank, lineWidth)))
     }
     if (receipt.recipientAccount.isNotBlank()) {
-      sb.appendLine(twoColumns("No.Rek", receipt.recipientAccount, lineWidth))
+      list.add(FormattedLine(text = twoColumns("No.Rek", receipt.recipientAccount, lineWidth)))
     }
     if (receipt.recipientName.isNotBlank()) {
-      sb.appendLine(twoColumns("Penerima", receipt.recipientName, lineWidth))
+      list.add(FormattedLine(text = twoColumns("Penerima", receipt.recipientName, lineWidth)))
     }
 
-    sb.appendLine(dividerSolid)
+    list.add(FormattedLine(text = dividerSolid))
 
     // 4. Finansial
-    sb.appendLine(twoColumns("Jumlah", receipt.formattedAmount, lineWidth))
-    sb.appendLine(twoColumns("Admin", receipt.formattedAdminFee, lineWidth))
-    sb.appendLine(dividerSolid)
-    sb.appendLine(twoColumns("TOTAL", receipt.formattedTotal, lineWidth))
+    list.add(FormattedLine(text = twoColumns("Jumlah", receipt.formattedAmount, lineWidth)))
+    list.add(FormattedLine(text = twoColumns("Admin", receipt.formattedAdminFee, lineWidth)))
+    list.add(FormattedLine(text = dividerSolid))
+    list.add(FormattedLine(text = twoColumns("TOTAL", receipt.formattedTotal, lineWidth), isBold = true))
 
-    // 5. Tambahan jika ada
+    // 5. Informasi Pelengkap
     if (settings.showRefNumber && receipt.refNumber.isNotBlank()) {
-      sb.appendLine(twoColumns("Ref", receipt.refNumber, lineWidth))
+      list.add(FormattedLine(text = twoColumns("Ref", receipt.refNumber, lineWidth)))
     }
     if (receipt.notes.isNotBlank()) {
-      sb.appendLine(twoColumns("Ket", receipt.notes, lineWidth))
+      list.add(FormattedLine(text = twoColumns("Ket", receipt.notes, lineWidth)))
     }
 
-    sb.appendLine(dividerDash)
+    list.add(FormattedLine(text = dividerDash))
 
     // 6. Footer Sederhana
     if (settings.footerMessage.isNotBlank()) {
-      for (line in settings.footerMessage.lines()) {
-        val trimmed = line.trim()
+      for (rawLine in settings.footerMessage.lines()) {
+        val trimmed = rawLine.trim()
         if (trimmed.isNotBlank()) {
           val wrapped = wrapText(trimmed, lineWidth)
           for (w in wrapped) {
-            sb.appendLine(centerText(w, lineWidth))
+            list.add(FormattedLine(text = w, isCentered = true))
           }
         }
       }
     } else {
-      sb.appendLine(centerText("Terima Kasih", lineWidth))
+      list.add(FormattedLine(text = "Terima Kasih", isCentered = true))
     }
 
-    sb.appendLine()
-    return sb.toString()
+    return list
   }
 
   // =========================================================================
   // 2. TEMA PROFESIONAL (Resmi Perbankan, Tegas, Validasi Formal)
   // =========================================================================
-  private fun formatProfesional(receipt: Receipt, settings: PrintSettings, lineWidth: Int): String {
+  private fun generateProfesionalLines(
+    receipt: Receipt,
+    settings: PrintSettings,
+    lineWidth: Int
+  ): List<FormattedLine> {
+    val list = mutableListOf<FormattedLine>()
     val dividerDouble = "=".repeat(lineWidth)
     val dividerSingle = "-".repeat(lineWidth)
-    val sb = StringBuilder()
 
     // 1. Header Formal Toko
     if (settings.autoAddHeader) {
       if (settings.storeName.isNotBlank()) {
-        val wrappedStoreLines = wrapText(settings.storeName.uppercase(), lineWidth)
-        for (line in wrappedStoreLines) {
-          sb.appendLine(centerText(line, lineWidth))
+        val wrappedStore = wrapText(settings.storeName.uppercase(), lineWidth)
+        for (w in wrappedStore) {
+          list.add(FormattedLine(text = w, isBold = true, isDoubleHeight = true, isCentered = true))
         }
       }
       if (settings.storeAddress.isNotBlank()) {
-        val wrappedAddressLines = wrapText(settings.storeAddress, lineWidth)
-        for (line in wrappedAddressLines) {
-          sb.appendLine(centerText(line, lineWidth))
+        val wrappedAddr = wrapText(settings.storeAddress, lineWidth)
+        for (w in wrappedAddr) {
+          list.add(FormattedLine(text = w, isCentered = true))
         }
       }
       if (settings.storePhone.isNotBlank()) {
-        sb.appendLine(centerText("Telp/WA: ${settings.storePhone}", lineWidth))
+        list.add(FormattedLine(text = "Telp/WA: ${settings.storePhone}", isCentered = true))
       }
-      sb.appendLine(dividerDouble)
+      list.add(FormattedLine(text = dividerDouble))
     }
 
     // 2. Judul Struk Resmi
-    sb.appendLine(centerText("STRUK BUKTI PENERIMA", lineWidth))
-    sb.appendLine(centerText("[ STATUS: TRANSAKSI BERHASIL ]", lineWidth))
-    sb.appendLine(dividerSingle)
+    list.add(FormattedLine(text = "STRUK BUKTI PENERIMA", isBold = true, isCentered = true))
+    list.add(FormattedLine(text = "[ STATUS: TRANSAKSI BERHASIL ]", isCentered = true))
+    list.add(FormattedLine(text = dividerSingle))
 
     // 3. Kolom Data Penerima Lengkap
     if (receipt.transactionDate.isNotBlank()) {
-      sb.appendLine(twoColumns("Waktu Transaksi", receipt.transactionDate, lineWidth))
+      list.add(FormattedLine(text = twoColumns("Waktu Transaksi", receipt.transactionDate, lineWidth)))
     }
     if (receipt.recipientBank.isNotBlank()) {
-      sb.appendLine(twoColumns("Bank Penyelenggara", receipt.recipientBank, lineWidth))
+      list.add(FormattedLine(text = twoColumns("Bank Penyelenggara", receipt.recipientBank, lineWidth)))
     }
     if (receipt.recipientAccount.isNotBlank()) {
-      sb.appendLine(twoColumns("No. Rekening/HP", receipt.recipientAccount, lineWidth))
+      list.add(FormattedLine(text = twoColumns("No. Rekening/HP", receipt.recipientAccount, lineWidth)))
     }
     if (receipt.recipientName.isNotBlank()) {
-      sb.appendLine(twoColumns("Nama Penerima", receipt.recipientName, lineWidth))
+      list.add(FormattedLine(text = twoColumns("Nama Penerima", receipt.recipientName, lineWidth)))
     }
 
-    sb.appendLine(dividerSingle)
+    list.add(FormattedLine(text = dividerSingle))
 
     // 4. Rincian Finansial
-    sb.appendLine(twoColumns("Nominal Transfer", receipt.formattedAmount, lineWidth))
-    sb.appendLine(twoColumns("Biaya Layanan Admin", receipt.formattedAdminFee, lineWidth))
-    sb.appendLine(dividerSingle)
-    sb.appendLine(twoColumns("TOTAL PEMBAYARAN", receipt.formattedTotal, lineWidth))
+    list.add(FormattedLine(text = twoColumns("Nominal Transfer", receipt.formattedAmount, lineWidth)))
+    list.add(FormattedLine(text = twoColumns("Biaya Layanan Admin", receipt.formattedAdminFee, lineWidth)))
+    list.add(FormattedLine(text = dividerSingle))
+    list.add(FormattedLine(text = twoColumns("TOTAL PEMBAYARAN", receipt.formattedTotal, lineWidth), isBold = true))
 
     // 5. Informasi Pelengkap
     if (settings.showRefNumber && receipt.refNumber.isNotBlank()) {
-      sb.appendLine(twoColumns("No. Referensi Bank", receipt.refNumber, lineWidth))
+      list.add(FormattedLine(text = twoColumns("No. Referensi Bank", receipt.refNumber, lineWidth)))
     }
     if (receipt.notes.isNotBlank()) {
-      sb.appendLine(twoColumns("Catatan / Berita", receipt.notes, lineWidth))
+      list.add(FormattedLine(text = twoColumns("Catatan / Berita", receipt.notes, lineWidth)))
     }
 
-    sb.appendLine(dividerDouble)
+    list.add(FormattedLine(text = dividerDouble))
 
     // 6. Footer Resmi
-    sb.appendLine(centerText("Simpan struk ini sebagai bukti pembayaran sah.", lineWidth))
+    list.add(FormattedLine(text = "Simpan struk ini sebagai bukti pembayaran sah.", isCentered = true))
     if (settings.footerMessage.isNotBlank()) {
       for (rawLine in settings.footerMessage.lines()) {
         val trimmed = rawLine.trim()
         if (trimmed.isNotBlank()) {
           val wrapped = wrapText(trimmed, lineWidth)
-          for (line in wrapped) {
-            sb.appendLine(centerText(line, lineWidth))
+          for (w in wrapped) {
+            list.add(FormattedLine(text = w, isCentered = true))
           }
         }
       }
     }
 
-    sb.appendLine()
-    return sb.toString()
+    return list
   }
 
   // =========================================================================
   // 3. TEMA MODERN (Retail & Fintech Kekinian, Blok Terstruktur, Aksen Visual)
   // =========================================================================
-  private fun formatModern(receipt: Receipt, settings: PrintSettings, lineWidth: Int): String {
+  private fun generateModernLines(
+    receipt: Receipt,
+    settings: PrintSettings,
+    lineWidth: Int
+  ): List<FormattedLine> {
+    val list = mutableListOf<FormattedLine>()
     val dividerDots = makeRepeatedPattern("* ", lineWidth)
     val dividerLine = "-".repeat(lineWidth)
-    val sb = StringBuilder()
 
     // 1. Header Modern Berbingkai
     if (settings.autoAddHeader) {
-      sb.appendLine(dividerDots)
+      list.add(FormattedLine(text = dividerDots))
       if (settings.storeName.isNotBlank()) {
         val wrapped = wrapText("★ ${settings.storeName.uppercase()} ★", lineWidth)
-        for (line in wrapped) {
-          sb.appendLine(centerText(line, lineWidth))
+        for (w in wrapped) {
+          list.add(FormattedLine(text = w, isBold = true, isDoubleHeight = true, isCentered = true))
         }
       }
       if (settings.storeAddress.isNotBlank()) {
         val wrappedAddr = wrapText(settings.storeAddress, lineWidth)
-        for (line in wrappedAddr) {
-          sb.appendLine(centerText(line, lineWidth))
+        for (w in wrappedAddr) {
+          list.add(FormattedLine(text = w, isCentered = true))
         }
       }
       if (settings.storePhone.isNotBlank()) {
-        sb.appendLine(centerText("WA/CS: ${settings.storePhone}", lineWidth))
+        list.add(FormattedLine(text = "WA/CS: ${settings.storePhone}", isCentered = true))
       }
-      sb.appendLine(dividerDots)
+      list.add(FormattedLine(text = dividerDots))
     }
 
     // 2. Headline Modern
-    sb.appendLine(centerText(">>> BUKTI TRANSFER DIGITAL <<<", lineWidth))
-    sb.appendLine()
+    list.add(FormattedLine(text = ">>> BUKTI TRANSFER DIGITAL <<<", isBold = true, isCentered = true))
+    list.add(FormattedLine(text = ""))
 
     // 3. Blok Rincian Penerima
-    sb.appendLine("## INFORMASI PENERIMA ##")
+    list.add(FormattedLine(text = "## INFORMASI PENERIMA ##", isBold = true))
     if (receipt.transactionDate.isNotBlank()) {
-      sb.appendLine(twoColumns("Waktu", receipt.transactionDate, lineWidth))
+      list.add(FormattedLine(text = twoColumns("Waktu", receipt.transactionDate, lineWidth)))
     }
     if (receipt.recipientBank.isNotBlank()) {
-      sb.appendLine(twoColumns("Bank/Tujuan", receipt.recipientBank, lineWidth))
+      list.add(FormattedLine(text = twoColumns("Bank/Tujuan", receipt.recipientBank, lineWidth)))
     }
     if (receipt.recipientAccount.isNotBlank()) {
-      sb.appendLine(twoColumns("ID / No. Rek", receipt.recipientAccount, lineWidth))
+      list.add(FormattedLine(text = twoColumns("ID / No. Rek", receipt.recipientAccount, lineWidth)))
     }
     if (receipt.recipientName.isNotBlank()) {
-      sb.appendLine(twoColumns("Atas Nama", receipt.recipientName, lineWidth))
+      list.add(FormattedLine(text = twoColumns("Atas Nama", receipt.recipientName, lineWidth)))
     }
 
-    sb.appendLine(dividerLine)
+    list.add(FormattedLine(text = dividerLine))
 
     // 4. Blok Rincian Tagihan
-    sb.appendLine("## RINCIAN BIAYA ##")
-    sb.appendLine(twoColumns("Nominal", receipt.formattedAmount, lineWidth))
-    sb.appendLine(twoColumns("Biaya Admin", receipt.formattedAdminFee, lineWidth))
-    sb.appendLine(dividerLine)
+    list.add(FormattedLine(text = "## RINCIAN BIAYA ##", isBold = true))
+    list.add(FormattedLine(text = twoColumns("Nominal", receipt.formattedAmount, lineWidth)))
+    list.add(FormattedLine(text = twoColumns("Biaya Admin", receipt.formattedAdminFee, lineWidth)))
+    list.add(FormattedLine(text = dividerLine))
 
-    // Highlight Total
+    // Highlight Total (Tebal & Ukuran Ganda)
     val totalStr = ">>> ${receipt.formattedTotal} <<<"
-    sb.appendLine(twoColumns("TOTAL BAYAR", totalStr, lineWidth))
+    list.add(
+      FormattedLine(
+        text = twoColumns("TOTAL BAYAR", totalStr, lineWidth),
+        isBold = true,
+        isDoubleHeight = true
+      )
+    )
 
     if (settings.showRefNumber && receipt.refNumber.isNotBlank()) {
-      sb.appendLine(twoColumns("Ref ID", receipt.refNumber, lineWidth))
+      list.add(FormattedLine(text = twoColumns("Ref ID", receipt.refNumber, lineWidth)))
     }
     if (receipt.notes.isNotBlank()) {
-      sb.appendLine(twoColumns("Catatan", receipt.notes, lineWidth))
+      list.add(FormattedLine(text = twoColumns("Catatan", receipt.notes, lineWidth)))
     }
 
-    sb.appendLine(dividerDots)
+    list.add(FormattedLine(text = dividerDots))
 
     // 5. Footer Modern
-    sb.appendLine(centerText("TERIMA KASIH ATAS KUNJUNGAN ANDA", lineWidth))
+    list.add(FormattedLine(text = "TERIMA KASIH ATAS KUNJUNGAN ANDA", isBold = true, isCentered = true))
     if (settings.footerMessage.isNotBlank()) {
       for (rawLine in settings.footerMessage.lines()) {
         val trimmed = rawLine.trim()
         if (trimmed.isNotBlank()) {
           val wrapped = wrapText(trimmed, lineWidth)
-          for (line in wrapped) {
-            sb.appendLine(centerText(line, lineWidth))
+          for (w in wrapped) {
+            list.add(FormattedLine(text = w, isCentered = true))
           }
         }
       }
     }
-    sb.appendLine(centerText("• Powered by JADISTRUK •", lineWidth))
+    list.add(FormattedLine(text = "• Powered by JADISTRUK •", isCentered = true))
 
-    sb.appendLine()
-    return sb.toString()
+    return list
   }
 
   // =========================================================================
-  // HELPER FUNCTIONS
+  // HELPER FUNCTIONS (Kalkulasi Kolom & Spasi Presisi Karakter)
   // =========================================================================
-  private fun makeRepeatedPattern(pattern: String, width: Int): String {
+  fun makeRepeatedPattern(pattern: String, width: Int): String {
     val times = (width / pattern.length) + 1
     val result = pattern.repeat(times)
     return result.take(width)
