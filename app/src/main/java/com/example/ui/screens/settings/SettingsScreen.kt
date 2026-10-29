@@ -67,8 +67,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Palette
 import com.example.data.model.AdminFeeRule
+import com.example.data.model.AppTheme
 import com.example.data.model.PrintSettings
 import com.example.data.model.ReceiptTheme
 
@@ -91,6 +93,7 @@ fun SettingsScreen(
   var showRefNumber by remember(currentSettings) { mutableStateOf(currentSettings.showRefNumber) }
   var autoAddHeader by remember(currentSettings) { mutableStateOf(currentSettings.autoAddHeader) }
   var receiptTheme by remember(currentSettings) { mutableStateOf(currentSettings.receiptTheme) }
+  var appTheme by remember(currentSettings) { mutableStateOf(currentSettings.appTheme) }
 
   // Admin Fee Tier / Range Rules states
   var autoApplyAdminFee by remember(currentSettings) { mutableStateOf(currentSettings.autoApplyAdminFee) }
@@ -579,7 +582,164 @@ fun SettingsScreen(
         }
       }
 
-      // 5. Konfigurasi Printer Thermal Bluetooth
+      // 5. TEMA TAMPILAN APLIKASI (UI THEME)
+      item {
+        Card(
+          modifier = Modifier.fillMaxWidth(),
+          shape = RoundedCornerShape(14.dp),
+          colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+          elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        ) {
+          Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+              modifier = Modifier.fillMaxWidth(),
+              verticalAlignment = Alignment.CenterVertically
+            ) {
+              Box(
+                modifier = Modifier
+                  .size(38.dp)
+                  .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+                contentAlignment = Alignment.Center
+              ) {
+                Icon(
+                  imageVector = Icons.Filled.Palette,
+                  contentDescription = null,
+                  tint = MaterialTheme.colorScheme.primary,
+                  modifier = Modifier.size(20.dp)
+                )
+              }
+              Spacer(modifier = Modifier.width(12.dp))
+              Column {
+                Text(
+                  text = "Tema Tampilan Aplikasi",
+                  style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                  color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                  text = "Pilih skema warna antarmuka aplikasi sesuai kenyamanan Anda",
+                  style = MaterialTheme.typography.bodySmall,
+                  color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+              }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Column(
+              verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+              AppTheme.entries.forEach { theme ->
+                val isSelected = appTheme == theme
+                Card(
+                  modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                      appTheme = theme
+                      onSaveSettings(
+                        currentSettings.copy(
+                          storeName = storeName,
+                          storeAddress = storeAddress,
+                          storePhone = storePhone,
+                          footerMessage = footerMessage,
+                          paperWidthMm = paperWidthMm,
+                          showDate = showDate,
+                          showRefNumber = showRefNumber,
+                          autoAddHeader = autoAddHeader,
+                          autoApplyAdminFee = autoApplyAdminFee,
+                          adminFeeRules = adminFeeRules,
+                          selectedPrinterAddress = selectedPrinterAddress,
+                          selectedPrinterName = selectedPrinterName,
+                          autoCutPaper = autoCutPaper,
+                          printFeedLines = printFeedLines,
+                          receiptTheme = receiptTheme,
+                          appTheme = theme
+                        )
+                      )
+                    }
+                    .testTag("settings_app_theme_${theme.id}"),
+                  shape = RoundedCornerShape(12.dp),
+                  colors = CardDefaults.cardColors(
+                    containerColor = if (isSelected) {
+                      MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                    } else {
+                      MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                    }
+                  ),
+                  border = BorderStroke(
+                    width = if (isSelected) 1.5.dp else 1.dp,
+                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
+                  )
+                ) {
+                  Row(
+                    modifier = Modifier
+                      .fillMaxWidth()
+                      .padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                  ) {
+                    // Pratinjau palet warna tema (Primary, Accent, Background)
+                    Row(
+                      horizontalArrangement = Arrangement.spacedBy((-6).dp),
+                      verticalAlignment = Alignment.CenterVertically
+                    ) {
+                      Box(
+                        modifier = Modifier
+                          .size(24.dp)
+                          .background(theme.primaryColor, CircleShape)
+                          .border(1.5.dp, MaterialTheme.colorScheme.surface, CircleShape)
+                      )
+                      Box(
+                        modifier = Modifier
+                          .size(24.dp)
+                          .background(theme.accentColor, CircleShape)
+                          .border(1.5.dp, MaterialTheme.colorScheme.surface, CircleShape)
+                      )
+                      Box(
+                        modifier = Modifier
+                          .size(24.dp)
+                          .background(theme.backgroundColor, CircleShape)
+                          .border(1.5.dp, MaterialTheme.colorScheme.surface, CircleShape)
+                      )
+                    }
+
+                    Spacer(modifier = Modifier.width(14.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
+                      Text(
+                        text = theme.displayName,
+                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onSurface
+                      )
+                      Spacer(modifier = Modifier.height(2.dp))
+                      Text(
+                        text = theme.subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                      )
+                    }
+
+                    if (isSelected) {
+                      Icon(
+                        imageVector = Icons.Filled.CheckCircle,
+                        contentDescription = "Terpilih",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(22.dp)
+                      )
+                    } else {
+                      Box(
+                        modifier = Modifier
+                          .size(20.dp)
+                          .border(1.5.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                      )
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // 6. Konfigurasi Printer Thermal Bluetooth
       item {
         Card(
           modifier = Modifier.fillMaxWidth(),
@@ -743,6 +903,7 @@ fun SettingsScreen(
                 autoCutPaper = autoCutPaper,
                 printFeedLines = printFeedLines,
                 receiptTheme = receiptTheme,
+                appTheme = appTheme,
               )
             )
             Toast.makeText(context, "Pengaturan struk & printer berhasil disimpan!", Toast.LENGTH_SHORT).show()

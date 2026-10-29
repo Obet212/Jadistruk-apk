@@ -5,7 +5,7 @@ data class PrintSettings(
   val storeAddress: String = "Layanan Cetak Struk Penerima",
   val storePhone: String = "",
   val footerMessage: String = "Terima kasih! Bukti transfer telah diverifikasi.",
-  val paperWidthMm: Int = 58, // 58 or 80
+  val paperWidthMm: Int = 58, // 58 or 80 / 88
   val showDate: Boolean = true,
   val showRefNumber: Boolean = false,
   val autoAddHeader: Boolean = true,
@@ -16,4 +16,5 @@ data class PrintSettings(
   val autoCutPaper: Boolean = true,
   val printFeedLines: Int = 3,
   val receiptTheme: ReceiptTheme = ReceiptTheme.PROFESIONAL,
+  val appTheme: AppTheme = AppTheme.OCEAN_BLUE,
 )

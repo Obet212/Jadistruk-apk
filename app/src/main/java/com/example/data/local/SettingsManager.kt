@@ -3,7 +3,9 @@ package com.example.data.local
 import android.content.Context
 import android.content.SharedPreferences
 import com.example.data.model.AdminFeeRule
+import com.example.data.model.AppTheme
 import com.example.data.model.PrintSettings
+import com.example.data.model.ReceiptTheme
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -34,7 +36,8 @@ class SettingsManager(context: Context) {
       selectedPrinterName = prefs.getString("printer_name", "") ?: "",
       autoCutPaper = prefs.getBoolean("auto_cut_paper", true),
       printFeedLines = prefs.getInt("print_feed_lines", 3),
-      receiptTheme = com.example.data.model.ReceiptTheme.fromId(prefs.getString("receipt_theme", "profesional")),
+      receiptTheme = ReceiptTheme.fromId(prefs.getString("receipt_theme", "profesional")),
+      appTheme = AppTheme.fromId(prefs.getString("app_ui_theme", "ocean_blue")),
     )
   }
 
@@ -55,6 +58,7 @@ class SettingsManager(context: Context) {
       .putBoolean("auto_cut_paper", newSettings.autoCutPaper)
       .putInt("print_feed_lines", newSettings.printFeedLines)
       .putString("receipt_theme", newSettings.receiptTheme.id)
+      .putString("app_ui_theme", newSettings.appTheme.id)
       .apply()
     _settings.value = newSettings
   }
