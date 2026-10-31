@@ -44,6 +44,7 @@ fun MainApp(
   val receiptCount by viewModel.receiptCount.collectAsState()
   val totalAmountSum by viewModel.totalAmountSum.collectAsState()
   val settings by viewModel.settings.collectAsState()
+  val appUpdateStatus by viewModel.appUpdateStatus.collectAsState()
 
   var templateToEdit by remember { mutableStateOf<com.example.data.model.OcrTemplate?>(null) }
   var templateSampleImageUri by remember { mutableStateOf<android.net.Uri?>(null) }
@@ -207,6 +208,10 @@ fun MainApp(
             },
             onTestPrint = { onResult ->
               viewModel.testPrint(onResult)
+            },
+            appUpdateStatus = appUpdateStatus,
+            onCheckForUpdate = {
+              viewModel.checkForAppUpdate()
             }
           )
         }

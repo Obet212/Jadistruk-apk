@@ -38,8 +38,34 @@ class ReceiptViewModel(application: Application) : AndroidViewModel(application)
   private val settingsManager = SettingsManager(application)
   val textRecognizer = MlKitTextRecognizer(application)
   val thermalPrinter = com.example.data.printer.BluetoothThermalPrinter(application)
+  val remoteConfigManager = com.example.data.remote.RemoteConfigManager(application)
 
   val settings: StateFlow<PrintSettings> = settingsManager.settings
+
+  private val _appUpdateStatus = MutableStateFlow<com.example.data.remote.AppUpdateStatus>(
+    com.example.data.remote.AppUpdateStatus.Checking
+  )
+  val appUpdateStatus: StateFlow<com.example.data.remote.AppUpdateStatus> = _appUpdateStatus.asStateFlow()
+
+  private val _isUpdateFailureDismissed = MutableStateFlow(false)
+  val isUpdateFailureDismissed: StateFlow<Boolean> = _isUpdateFailureDismissed.asStateFlow()
+
+  init {
+    checkForAppUpdate()
+  }
+
+  fun checkForAppUpdate() {
+    viewModelScope.launch {
+      _appUpdateStatus.value = com.example.data.remote.AppUpdateStatus.Checking
+      _isUpdateFailureDismissed.value = false
+      val status = remoteConfigManager.checkAppVersion()
+      _appUpdateStatus.value = status
+    }
+  }
+
+  fun dismissUpdateFailure() {
+    _isUpdateFailureDismissed.value = true
+  }
 
   val savedReceipts: StateFlow<List<Receipt>> = receiptDao.getAllReceipts()
     .map { entities -> entities.map { it.toModel() } }

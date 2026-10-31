@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<defaultsMap>
+    <entry>
+        <key>latest_version</key>
+        <value>1.5</value>
+    </entry>
+    <entry>
+        <key>minimum_version</key>
+        <value>1.0</value>
+    </entry>
+    <entry>
+        <key>update_title</key>
+        <value>Pembaruan Aplikasi Tersedia</value>
+    </entry>
+    <entry>
+        <key>update_message</key>
+        <value>Versi aplikasi Anda sudah tidak didukung. Silakan perbarui aplikasi JadiStruk ke versi terbaru untuk menikmati fitur dan stabilitas terbaik.</value>
+    </entry>
+    <entry>
+        <key>update_url</key>
+        <value>https://github.com/Obet212/Jadistruk-apk/releases</value>
+    </entry>
+</defaultsMap>

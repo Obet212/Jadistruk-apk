@@ -101,6 +101,7 @@ dependencies {
   implementation(libs.mlkit.text.recognition)
   implementation(libs.converter.moshi)
   implementation(libs.firebase.ai)
+  implementation(libs.firebase.config)
   // Uncomment to use Firestore:
   // implementation(libs.firebase.firestore)
 

@@ -48,6 +48,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -68,11 +69,16 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.CloudDone
+import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.SystemUpdate
+import com.example.BuildConfig
 import com.example.data.model.AdminFeeRule
 import com.example.data.model.AppTheme
 import com.example.data.model.PrintSettings
 import com.example.data.model.ReceiptTheme
+import com.example.data.remote.AppUpdateStatus
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -81,6 +87,8 @@ fun SettingsScreen(
   onSaveSettings: (PrintSettings) -> Unit,
   getPairedPrinters: () -> List<BluetoothPrinterDevice> = { emptyList() },
   onTestPrint: ((com.example.data.printer.PrintResult) -> Unit) -> Unit = {},
+  appUpdateStatus: AppUpdateStatus = AppUpdateStatus.UpToDate(BuildConfig.VERSION_NAME, BuildConfig.VERSION_NAME),
+  onCheckForUpdate: () -> Unit = {},
 ) {
   val context = LocalContext.current
 
@@ -882,7 +890,125 @@ fun SettingsScreen(
         }
       }
 
-      // 6. Save Button
+      // 7. Informasi Aplikasi & Firebase Remote Config
+      item {
+        Card(
+          modifier = Modifier.fillMaxWidth(),
+          shape = RoundedCornerShape(14.dp),
+          colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+          elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        ) {
+          Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+              modifier = Modifier.fillMaxWidth(),
+              verticalAlignment = Alignment.CenterVertically
+            ) {
+              Box(
+                modifier = Modifier
+                  .size(38.dp)
+                  .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+                contentAlignment = Alignment.Center
+              ) {
+                Icon(
+                  imageVector = Icons.Filled.SystemUpdate,
+                  contentDescription = null,
+                  tint = MaterialTheme.colorScheme.primary,
+                  modifier = Modifier.size(20.dp)
+                )
+              }
+              Spacer(modifier = Modifier.width(12.dp))
+              Column {
+                Text(
+                  text = "Versi & Pembaruan Sistem",
+                  style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                  color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                  text = "Firebase Remote Config auto-update check",
+                  style = MaterialTheme.typography.bodySmall,
+                  color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+              }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Surface(
+              shape = RoundedCornerShape(10.dp),
+              color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+              modifier = Modifier.fillMaxWidth()
+            ) {
+              Column(
+                modifier = Modifier.padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+              ) {
+                Row(
+                  modifier = Modifier.fillMaxWidth(),
+                  horizontalArrangement = Arrangement.SpaceBetween,
+                  verticalAlignment = Alignment.CenterVertically
+                ) {
+                  Text(
+                    text = "Versi Aplikasi Terpasang",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                  )
+                  Text(
+                    text = "v${BuildConfig.VERSION_NAME}",
+                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.primary
+                  )
+                }
+
+                Row(
+                  modifier = Modifier.fillMaxWidth(),
+                  horizontalArrangement = Arrangement.SpaceBetween,
+                  verticalAlignment = Alignment.CenterVertically
+                ) {
+                  Text(
+                    text = "Status Kompatibilitas",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                  )
+                  val statusText = when (appUpdateStatus) {
+                    is AppUpdateStatus.Checking -> "Memeriksa..."
+                    is AppUpdateStatus.UpToDate -> "Versi Kompatibel"
+                    is AppUpdateStatus.ForcedUpdateRequired -> "Perlu Diperbarui"
+                    is AppUpdateStatus.CheckFailed -> "Mode Offline"
+                  }
+                  val statusColor = when (appUpdateStatus) {
+                    is AppUpdateStatus.Checking -> MaterialTheme.colorScheme.onSurfaceVariant
+                    is AppUpdateStatus.UpToDate -> MaterialTheme.colorScheme.primary
+                    is AppUpdateStatus.ForcedUpdateRequired -> MaterialTheme.colorScheme.error
+                    is AppUpdateStatus.CheckFailed -> MaterialTheme.colorScheme.secondary
+                  }
+                  Text(
+                    text = statusText,
+                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                    color = statusColor
+                  )
+                }
+              }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            OutlinedButton(
+              onClick = {
+                onCheckForUpdate()
+                Toast.makeText(context, "Memeriksa versi ke Firebase Remote Config...", Toast.LENGTH_SHORT).show()
+              },
+              modifier = Modifier.fillMaxWidth(),
+              shape = RoundedCornerShape(10.dp)
+            ) {
+              Icon(Icons.Filled.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
+              Spacer(modifier = Modifier.width(8.dp))
+              Text("Periksa Pembaruan Sekarang")
+            }
+          }
+        }
+      }
+
+      // 8. Save Button
       item {
         Button(
           onClick = {
