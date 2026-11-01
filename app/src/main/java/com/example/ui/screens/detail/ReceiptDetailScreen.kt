@@ -188,7 +188,7 @@ fun ReceiptDetailScreen(
 
   fun checkAndRequestPermissionsThen(onReady: () -> Unit) {
     if (!isBluetoothSupported()) {
-      Toast.makeText(context, "Perangkat tidak memiliki Bluetooth. Gunakan cetak sistem / PDF.", Toast.LENGTH_LONG).show()
+      Toast.makeText(context, "Perangkat tidak memiliki Bluetooth. Gunakan cetak sistem / bagikan gambar.", Toast.LENGTH_LONG).show()
       return
     }
 
@@ -296,10 +296,10 @@ fun ReceiptDetailScreen(
         actions = {
           IconButton(
             onClick = {
-              ReceiptPdfAndPrintHelper.exportAndSharePdf(context, receipt, activeSettings)
+              ReceiptPdfAndPrintHelper.exportAndShareJpg(context, receipt, activeSettings)
             }
           ) {
-            Icon(Icons.Filled.PictureAsPdf, contentDescription = "Ekspor PDF")
+            Icon(Icons.Filled.Share, contentDescription = "Bagikan Gambar")
           }
           IconButton(
             onClick = {
@@ -866,21 +866,21 @@ fun ReceiptDetailScreen(
                 Text("Print Sistem", fontSize = 12.sp, maxLines = 1)
               }
 
-              // Tombol Bagikan File PDF
+              // Tombol Bagikan Gambar JPG
               Button(
                 onClick = {
-                  ReceiptPdfAndPrintHelper.exportAndSharePdf(context, receipt, activeSettings)
+                  ReceiptPdfAndPrintHelper.exportAndShareJpg(context, receipt, activeSettings)
                 },
                 modifier = Modifier
                   .weight(1f)
                   .height(46.dp)
-                  .testTag("btn_share_pdf"),
+                  .testTag("btn_share_image"),
                 shape = RoundedCornerShape(10.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
               ) {
-                Icon(Icons.Filled.PictureAsPdf, contentDescription = null, modifier = Modifier.size(18.dp))
+                Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(6.dp))
-                Text("Bagikan PDF", fontSize = 12.sp, maxLines = 1)
+                Text("Bagikan Gambar", fontSize = 12.sp, maxLines = 1)
               }
             }
 
@@ -1128,7 +1128,7 @@ fun ReceiptDetailScreen(
       title = { Text("Izin Bluetooth Diperlukan") },
       text = {
         Text(
-          "Untuk dapat mendeteksi dan mengirim data ke printer thermal kasir, Android membutuhkan izin koneksi Bluetooth. Jika tidak ingin menggunakan Bluetooth, Anda tetap dapat mencetak struk lewat menu 'Print Sistem' atau 'Bagikan PDF'.",
+          "Untuk dapat mendeteksi dan mengirim data ke printer thermal kasir, Android membutuhkan izin koneksi Bluetooth. Jika tidak ingin menggunakan Bluetooth, Anda tetap dapat mencetak struk lewat menu 'Print Sistem' atau 'Bagikan Gambar'.",
           style = MaterialTheme.typography.bodyMedium
         )
       },

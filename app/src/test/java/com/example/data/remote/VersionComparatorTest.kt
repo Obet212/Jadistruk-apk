@@ -18,23 +18,29 @@ class VersionComparatorTest {
     // Current is 1.5, Minimum required is 1.5.1 -> Must update (true)
     assertTrue(VersionComparator.isVersionBelowMinimum("1.5", "1.5.1"))
 
-    // Current is v1.4, Minimum required is v1.5 -> Must update (true)
-    assertTrue(VersionComparator.isVersionBelowMinimum("v1.4", "v1.5"))
+    // Current is 1.6, Minimum required is 1.7 -> Must update (true)
+    assertTrue(VersionComparator.isVersionBelowMinimum("1.6", "1.7"))
+
+    // Current is 1.6, Minimum required is 2.0 -> Must update (true)
+    assertTrue(VersionComparator.isVersionBelowMinimum("1.6", "2.0"))
+
+    // Current is v1.5, Minimum required is v1.6 -> Must update (true)
+    assertTrue(VersionComparator.isVersionBelowMinimum("v1.5", "v1.6"))
   }
 
   @Test
   fun testVersionSatisfiesMinimumCases() {
-    // Current is 1.5, Minimum required is 1.5 -> Satisfied (false)
-    assertFalse(VersionComparator.isVersionBelowMinimum("1.5", "1.5"))
+    // Current is 1.6, Minimum required is 1.6 -> Satisfied (false)
+    assertFalse(VersionComparator.isVersionBelowMinimum("1.6", "1.6"))
 
-    // Current is 1.5, Minimum required is 1.0 -> Satisfied (false)
-    assertFalse(VersionComparator.isVersionBelowMinimum("1.5", "1.0"))
+    // Current is 1.6, Minimum required is 1.5 -> Satisfied (false)
+    assertFalse(VersionComparator.isVersionBelowMinimum("1.6", "1.5"))
 
-    // Current is 2.0, Minimum required is 1.5 -> Satisfied (false)
-    assertFalse(VersionComparator.isVersionBelowMinimum("2.0", "1.5"))
+    // Current is 1.6, Minimum required is 1.0 -> Satisfied (false)
+    assertFalse(VersionComparator.isVersionBelowMinimum("1.6", "1.0"))
 
-    // Current is 1.5.2, Minimum required is 1.5.1 -> Satisfied (false)
-    assertFalse(VersionComparator.isVersionBelowMinimum("1.5.2", "1.5.1"))
+    // Current is 1.6.2, Minimum required is 1.6.1 -> Satisfied (false)
+    assertFalse(VersionComparator.isVersionBelowMinimum("1.6.2", "1.6.1"))
   }
 
   @Test

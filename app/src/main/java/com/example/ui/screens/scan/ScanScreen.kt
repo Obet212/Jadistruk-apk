@@ -1004,7 +1004,7 @@ fun ScanScreen(
                 ) {
                   Icon(Icons.Filled.Print, contentDescription = null, modifier = Modifier.size(18.dp))
                   Spacer(modifier = Modifier.width(6.dp))
-                  Text("Format Struk", maxLines = 1)
+                  Text("Cetak", maxLines = 1)
                 }
               }
             }

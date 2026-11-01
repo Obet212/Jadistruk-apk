@@ -2,6 +2,7 @@ package com.example.data.printer
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
@@ -139,6 +140,125 @@ object ReceiptPdfAndPrintHelper {
       context.startActivity(Intent.createChooser(shareIntent, "Kirim / Bagikan File PDF Struk"))
     } catch (e: Exception) {
       Toast.makeText(context, "Gagal membuat dokumen PDF: ${e.message}", Toast.LENGTH_LONG).show()
+    }
+  }
+
+  /**
+   * Alternatif Cetak & Berbagi: Ekspor dan Bagikan Struk dalam bentuk gambar JPG tajam berkualitas tinggi.
+   * Ukuran proporsional, font monospace rapi sesuai lebar kolom, seluruh teks terbaca, dan tidak terpotong.
+   */
+  fun exportAndShareJpg(context: Context, receipt: Receipt, settings: PrintSettings) {
+    try {
+      val lineWidth = ReceiptFormatter.getLineWidth(settings.paperWidthMm)
+      val formattedLines = ReceiptFormatter.getFormattedLines(receipt, settings)
+
+      // Resolusi tajam: 720px untuk 58mm (32 kolom), 960px untuk 88mm (48 kolom)
+      val imageWidth = if (lineWidth == 48) 960 else 720
+      val sideMargin = if (lineWidth == 48) 48f else 36f
+      val printableWidth = imageWidth - (sideMargin * 2f)
+
+      // Kalibrasi ukuran font monospace agar tepat lineWidth karakter mengisi printableWidth tanpa subpixel drift
+      val testPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        typeface = Typeface.MONOSPACE
+        textSize = 30f
+      }
+      val probeWidth = testPaint.measureText("0".repeat(lineWidth))
+      val exactBaseTextSize = 30f * (printableWidth / probeWidth)
+
+      val normalPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.rgb(20, 20, 20)
+        typeface = Typeface.MONOSPACE
+        textSize = exactBaseTextSize
+      }
+
+      val boldPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.rgb(10, 10, 10)
+        typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
+        textSize = exactBaseTextSize
+      }
+
+      val doubleHeightPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.BLACK
+        typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
+        textSize = exactBaseTextSize * 1.25f
+        textScaleX = 0.8f // Menjaga lebar karakter tidak meluber keluar kertas
+      }
+
+      val normalMetrics = normalPaint.fontMetrics
+      val normalLineAdvance = (normalMetrics.descent - normalMetrics.ascent) * 1.18f
+
+      val doubleMetrics = doubleHeightPaint.fontMetrics
+      val doubleLineAdvance = (doubleMetrics.descent - doubleMetrics.ascent) * 1.18f
+
+      val topMargin = 40f
+      val bottomMargin = 48f
+      var totalHeight = topMargin + bottomMargin
+      for (line in formattedLines) {
+        totalHeight += if (line.isDoubleHeight) doubleLineAdvance else normalLineAdvance
+      }
+
+      val finalHeight = totalHeight.toInt().coerceAtLeast(240)
+      val bitmap = Bitmap.createBitmap(imageWidth, finalHeight, Bitmap.Config.ARGB_8888)
+      val canvas = Canvas(bitmap)
+
+      // Latar belakang putih bersih
+      canvas.drawColor(Color.WHITE)
+
+      // Garis tepi tipis dan rapi khas batas kertas struk
+      val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.rgb(220, 220, 215)
+        style = Paint.Style.STROKE
+        strokeWidth = 2f
+      }
+      canvas.drawRect(1f, 1f, imageWidth.toFloat() - 1f, finalHeight.toFloat() - 1f, borderPaint)
+
+      // Gambar setiap baris secara presisi dan terstruktur
+      var currentY = topMargin
+      for (line in formattedLines) {
+        val paint = when {
+          line.isDoubleHeight -> doubleHeightPaint
+          line.isBold -> boldPaint
+          else -> normalPaint
+        }
+        val lineAdvance = if (line.isDoubleHeight) doubleLineAdvance else normalLineAdvance
+        val baselineY = currentY - paint.fontMetrics.ascent
+
+        if (line.text.isNotBlank()) {
+          val textWidth = paint.measureText(line.text)
+          val x = if (line.isCentered) {
+            sideMargin + ((printableWidth - textWidth) / 2f).coerceAtLeast(0f)
+          } else {
+            sideMargin
+          }
+          canvas.drawText(line.text, x, baselineY, paint)
+        }
+        currentY += lineAdvance
+      }
+
+      val receiptsDir = File(context.cacheDir, "receipts").apply { mkdirs() }
+      val jpgFile = File(receiptsDir, "Struk_${receipt.id}_${System.currentTimeMillis()}.jpg")
+
+      FileOutputStream(jpgFile).use { out ->
+        bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
+      }
+
+      val contentUri = FileProvider.getUriForFile(
+        context,
+        "${context.packageName}.fileprovider",
+        jpgFile
+      )
+
+      val shareIntent = Intent(Intent.ACTION_SEND).apply {
+        type = "image/jpeg"
+        putExtra(Intent.EXTRA_STREAM, contentUri)
+        putExtra(Intent.EXTRA_SUBJECT, "Struk Bukti Transfer - ${receipt.recipientName}")
+        putExtra(Intent.EXTRA_TEXT, "Struk bukti transfer ${receipt.recipientBank} senilai ${receipt.formattedAmount}.")
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+      }
+
+      context.startActivity(Intent.createChooser(shareIntent, "Kirim / Bagikan Gambar Struk"))
+    } catch (e: Exception) {
+      Toast.makeText(context, "Gagal membagikan gambar struk: ${e.message}", Toast.LENGTH_LONG).show()
     }
   }
 
