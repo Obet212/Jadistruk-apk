@@ -10,4 +10,5 @@ data class OcrTemplate(
   val amountPattern: String, // Regex or key phrases for amount
   val isBuiltIn: Boolean = true,
   val areaConfigJson: String = "", // JSON configuration for field bounding box areas
+  val sampleImageUri: String = "", // Persistent URI or internal file path of sample receipt image
 )

@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -47,6 +49,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -118,6 +121,10 @@ fun SettingsScreen(
   var showAddDialog by remember { mutableStateOf(false) }
   var ruleToEdit by remember { mutableStateOf<AdminFeeRule?>(null) }
   var ruleToDelete by remember { mutableStateOf<AdminFeeRule?>(null) }
+
+  // Theme dialog state
+  var showThemeDialog by remember { mutableStateOf(false) }
+  var tempSelectedTheme by remember(showThemeDialog) { mutableStateOf(appTheme) }
 
   Scaffold(
     topBar = {
@@ -593,155 +600,73 @@ fun SettingsScreen(
       // 5. TEMA TAMPILAN APLIKASI (UI THEME)
       item {
         Card(
-          modifier = Modifier.fillMaxWidth(),
+          modifier = Modifier
+            .fillMaxWidth()
+            .clickable {
+              tempSelectedTheme = appTheme
+              showThemeDialog = true
+            }
+            .testTag("btn_theme_setting"),
           shape = RoundedCornerShape(14.dp),
           colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
           elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
         ) {
-          Column(modifier = Modifier.padding(16.dp)) {
+          Row(
+            modifier = Modifier
+              .fillMaxWidth()
+              .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+          ) {
+            Box(
+              modifier = Modifier
+                .size(40.dp)
+                .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+              contentAlignment = Alignment.Center
+            ) {
+              Icon(
+                imageVector = Icons.Filled.Palette,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(22.dp)
+              )
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+              Text(
+                text = "Tema Tampilan Aplikasi",
+                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                color = MaterialTheme.colorScheme.onSurface
+              )
+              Spacer(modifier = Modifier.height(2.dp))
+              Text(
+                text = "Tema aktif: ${appTheme.displayName} • Ketuk untuk ubah",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+              )
+            }
+            // Pratinjau 3 warna tema aktif saat ini
             Row(
-              modifier = Modifier.fillMaxWidth(),
+              horizontalArrangement = Arrangement.spacedBy((-6).dp),
               verticalAlignment = Alignment.CenterVertically
             ) {
               Box(
                 modifier = Modifier
-                  .size(38.dp)
-                  .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
-                contentAlignment = Alignment.Center
-              ) {
-                Icon(
-                  imageVector = Icons.Filled.Palette,
-                  contentDescription = null,
-                  tint = MaterialTheme.colorScheme.primary,
-                  modifier = Modifier.size(20.dp)
-                )
-              }
-              Spacer(modifier = Modifier.width(12.dp))
-              Column {
-                Text(
-                  text = "Tema Tampilan Aplikasi",
-                  style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                  color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                  text = "Pilih skema warna antarmuka aplikasi sesuai kenyamanan Anda",
-                  style = MaterialTheme.typography.bodySmall,
-                  color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-              }
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            Column(
-              verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-              AppTheme.entries.forEach { theme ->
-                val isSelected = appTheme == theme
-                Card(
-                  modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable {
-                      appTheme = theme
-                      onSaveSettings(
-                        currentSettings.copy(
-                          storeName = storeName,
-                          storeAddress = storeAddress,
-                          storePhone = storePhone,
-                          footerMessage = footerMessage,
-                          paperWidthMm = paperWidthMm,
-                          showDate = showDate,
-                          showRefNumber = showRefNumber,
-                          autoAddHeader = autoAddHeader,
-                          autoApplyAdminFee = autoApplyAdminFee,
-                          adminFeeRules = adminFeeRules,
-                          selectedPrinterAddress = selectedPrinterAddress,
-                          selectedPrinterName = selectedPrinterName,
-                          autoCutPaper = autoCutPaper,
-                          printFeedLines = printFeedLines,
-                          receiptTheme = receiptTheme,
-                          appTheme = theme
-                        )
-                      )
-                    }
-                    .testTag("settings_app_theme_${theme.id}"),
-                  shape = RoundedCornerShape(12.dp),
-                  colors = CardDefaults.cardColors(
-                    containerColor = if (isSelected) {
-                      MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
-                    } else {
-                      MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
-                    }
-                  ),
-                  border = BorderStroke(
-                    width = if (isSelected) 1.5.dp else 1.dp,
-                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
-                  )
-                ) {
-                  Row(
-                    modifier = Modifier
-                      .fillMaxWidth()
-                      .padding(horizontal = 14.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                  ) {
-                    // Pratinjau palet warna tema (Primary, Accent, Background)
-                    Row(
-                      horizontalArrangement = Arrangement.spacedBy((-6).dp),
-                      verticalAlignment = Alignment.CenterVertically
-                    ) {
-                      Box(
-                        modifier = Modifier
-                          .size(24.dp)
-                          .background(theme.primaryColor, CircleShape)
-                          .border(1.5.dp, MaterialTheme.colorScheme.surface, CircleShape)
-                      )
-                      Box(
-                        modifier = Modifier
-                          .size(24.dp)
-                          .background(theme.accentColor, CircleShape)
-                          .border(1.5.dp, MaterialTheme.colorScheme.surface, CircleShape)
-                      )
-                      Box(
-                        modifier = Modifier
-                          .size(24.dp)
-                          .background(theme.backgroundColor, CircleShape)
-                          .border(1.5.dp, MaterialTheme.colorScheme.surface, CircleShape)
-                      )
-                    }
-
-                    Spacer(modifier = Modifier.width(14.dp))
-
-                    Column(modifier = Modifier.weight(1f)) {
-                      Text(
-                        text = theme.displayName,
-                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.onSurface
-                      )
-                      Spacer(modifier = Modifier.height(2.dp))
-                      Text(
-                        text = theme.subtitle,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                      )
-                    }
-
-                    if (isSelected) {
-                      Icon(
-                        imageVector = Icons.Filled.CheckCircle,
-                        contentDescription = "Terpilih",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(22.dp)
-                      )
-                    } else {
-                      Box(
-                        modifier = Modifier
-                          .size(20.dp)
-                          .border(1.5.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
-                      )
-                    }
-                  }
-                }
-              }
+                  .size(22.dp)
+                  .background(appTheme.primaryColor, CircleShape)
+                  .border(1.5.dp, MaterialTheme.colorScheme.surface, CircleShape)
+              )
+              Box(
+                modifier = Modifier
+                  .size(22.dp)
+                  .background(appTheme.accentColor, CircleShape)
+                  .border(1.5.dp, MaterialTheme.colorScheme.surface, CircleShape)
+              )
+              Box(
+                modifier = Modifier
+                  .size(22.dp)
+                  .background(appTheme.backgroundColor, CircleShape)
+                  .border(1.5.dp, MaterialTheme.colorScheme.surface, CircleShape)
+              )
             }
           }
         }
@@ -890,125 +815,7 @@ fun SettingsScreen(
         }
       }
 
-      // 7. Informasi Aplikasi & Firebase Remote Config
-      item {
-        Card(
-          modifier = Modifier.fillMaxWidth(),
-          shape = RoundedCornerShape(14.dp),
-          colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-          elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-        ) {
-          Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-              modifier = Modifier.fillMaxWidth(),
-              verticalAlignment = Alignment.CenterVertically
-            ) {
-              Box(
-                modifier = Modifier
-                  .size(38.dp)
-                  .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
-                contentAlignment = Alignment.Center
-              ) {
-                Icon(
-                  imageVector = Icons.Filled.SystemUpdate,
-                  contentDescription = null,
-                  tint = MaterialTheme.colorScheme.primary,
-                  modifier = Modifier.size(20.dp)
-                )
-              }
-              Spacer(modifier = Modifier.width(12.dp))
-              Column {
-                Text(
-                  text = "Versi & Pembaruan Sistem",
-                  style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                  color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                  text = "Firebase Remote Config auto-update check",
-                  style = MaterialTheme.typography.bodySmall,
-                  color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-              }
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            Surface(
-              shape = RoundedCornerShape(10.dp),
-              color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-              modifier = Modifier.fillMaxWidth()
-            ) {
-              Column(
-                modifier = Modifier.padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-              ) {
-                Row(
-                  modifier = Modifier.fillMaxWidth(),
-                  horizontalArrangement = Arrangement.SpaceBetween,
-                  verticalAlignment = Alignment.CenterVertically
-                ) {
-                  Text(
-                    text = "Versi Aplikasi Terpasang",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                  )
-                  Text(
-                    text = "v${BuildConfig.VERSION_NAME}",
-                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.primary
-                  )
-                }
-
-                Row(
-                  modifier = Modifier.fillMaxWidth(),
-                  horizontalArrangement = Arrangement.SpaceBetween,
-                  verticalAlignment = Alignment.CenterVertically
-                ) {
-                  Text(
-                    text = "Status Kompatibilitas",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                  )
-                  val statusText = when (appUpdateStatus) {
-                    is AppUpdateStatus.Checking -> "Memeriksa..."
-                    is AppUpdateStatus.UpToDate -> "Versi Kompatibel"
-                    is AppUpdateStatus.ForcedUpdateRequired -> "Perlu Diperbarui"
-                    is AppUpdateStatus.CheckFailed -> "Mode Offline"
-                  }
-                  val statusColor = when (appUpdateStatus) {
-                    is AppUpdateStatus.Checking -> MaterialTheme.colorScheme.onSurfaceVariant
-                    is AppUpdateStatus.UpToDate -> MaterialTheme.colorScheme.primary
-                    is AppUpdateStatus.ForcedUpdateRequired -> MaterialTheme.colorScheme.error
-                    is AppUpdateStatus.CheckFailed -> MaterialTheme.colorScheme.secondary
-                  }
-                  Text(
-                    text = statusText,
-                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                    color = statusColor
-                  )
-                }
-              }
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            OutlinedButton(
-              onClick = {
-                onCheckForUpdate()
-                Toast.makeText(context, "Memeriksa versi ke Firebase Remote Config...", Toast.LENGTH_SHORT).show()
-              },
-              modifier = Modifier.fillMaxWidth(),
-              shape = RoundedCornerShape(10.dp)
-            ) {
-              Icon(Icons.Filled.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
-              Spacer(modifier = Modifier.width(8.dp))
-              Text("Periksa Pembaruan Sekarang")
-            }
-          }
-        }
-      }
-
-      // 8. Save Button
+      // 7. Save Button
       item {
         Button(
           onClick = {
@@ -1308,6 +1115,159 @@ fun SettingsScreen(
           Text("Tutup")
         }
       }
+    )
+  }
+
+  // DIALOG PILIH TEMA TAMPILAN
+  if (showThemeDialog) {
+    AlertDialog(
+      onDismissRequest = {
+        tempSelectedTheme = appTheme
+        showThemeDialog = false
+      },
+      title = {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          Icon(Icons.Filled.Palette, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+          Spacer(modifier = Modifier.width(8.dp))
+          Text(
+            text = "Pilih Tema Tampilan",
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+          )
+        }
+      },
+      text = {
+        Column(
+          modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(max = 380.dp)
+            .verticalScroll(rememberScrollState()),
+          verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+          Text(
+            text = "Pilih tema warna aplikasi yang diinginkan. Tekan TERAPKAN untuk menyimpan dan mengaktifkan tema.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+          )
+          Spacer(modifier = Modifier.height(4.dp))
+          AppTheme.entries.forEach { theme ->
+            val isSelected = tempSelectedTheme == theme
+            Card(
+              modifier = Modifier
+                .fillMaxWidth()
+                .clickable {
+                  tempSelectedTheme = theme
+                },
+              colors = CardDefaults.cardColors(
+                containerColor = if (isSelected) {
+                  MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                } else {
+                  MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                }
+              ),
+              shape = RoundedCornerShape(12.dp),
+              border = if (isSelected) BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary) else null
+            ) {
+              Row(
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+              ) {
+                RadioButton(
+                  selected = isSelected,
+                  onClick = { tempSelectedTheme = theme }
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                  Text(
+                    text = theme.displayName,
+                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium),
+                    color = MaterialTheme.colorScheme.onSurface
+                  )
+                  Text(
+                    text = theme.subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                  )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Row(
+                  horizontalArrangement = Arrangement.spacedBy((-4).dp),
+                  verticalAlignment = Alignment.CenterVertically
+                ) {
+                  Box(
+                    modifier = Modifier
+                      .size(20.dp)
+                      .background(theme.primaryColor, CircleShape)
+                      .border(1.dp, MaterialTheme.colorScheme.surface, CircleShape)
+                  )
+                  Box(
+                    modifier = Modifier
+                      .size(20.dp)
+                      .background(theme.accentColor, CircleShape)
+                      .border(1.dp, MaterialTheme.colorScheme.surface, CircleShape)
+                  )
+                  Box(
+                    modifier = Modifier
+                      .size(20.dp)
+                      .background(theme.backgroundColor, CircleShape)
+                      .border(1.dp, MaterialTheme.colorScheme.surface, CircleShape)
+                  )
+                }
+              }
+            }
+          }
+        }
+      },
+      confirmButton = {
+        Row(
+          modifier = Modifier.fillMaxWidth(),
+          horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+          OutlinedButton(
+            onClick = {
+              tempSelectedTheme = appTheme
+              showThemeDialog = false
+            },
+            modifier = Modifier.weight(1f),
+            shape = RoundedCornerShape(10.dp)
+          ) {
+            Text("BATAL")
+          }
+          Button(
+            onClick = {
+              appTheme = tempSelectedTheme
+              onSaveSettings(
+                PrintSettings(
+                  storeName = storeName.trim(),
+                  storeAddress = storeAddress.trim(),
+                  storePhone = storePhone.trim(),
+                  footerMessage = footerMessage.trim(),
+                  paperWidthMm = paperWidthMm,
+                  showDate = showDate,
+                  showRefNumber = showRefNumber,
+                  autoAddHeader = autoAddHeader,
+                  autoApplyAdminFee = autoApplyAdminFee,
+                  adminFeeRules = adminFeeRules,
+                  selectedPrinterAddress = selectedPrinterAddress,
+                  selectedPrinterName = selectedPrinterName,
+                  autoCutPaper = autoCutPaper,
+                  printFeedLines = printFeedLines,
+                  receiptTheme = receiptTheme,
+                  appTheme = tempSelectedTheme,
+                )
+              )
+              showThemeDialog = false
+              Toast.makeText(context, "Tema berhasil diaktifkan: ${tempSelectedTheme.displayName}", Toast.LENGTH_SHORT).show()
+            },
+            modifier = Modifier.weight(1f),
+            shape = RoundedCornerShape(10.dp)
+          ) {
+            Text("TERAPKAN")
+          }
+        }
+      },
+      dismissButton = null
     )
   }
 }

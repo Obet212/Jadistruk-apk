@@ -58,6 +58,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import coil.compose.AsyncImage
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
@@ -209,7 +210,8 @@ fun TemplatesScreen(
             TemplateItemCard(
               template = template,
               onOpenEditor = {
-                onOpenTemplateEditor(template, null)
+                val sampleUri = template.sampleImageUri.takeIf { it.isNotBlank() }?.let { Uri.parse(it) }
+                onOpenTemplateEditor(template, sampleUri)
               },
               onDelete = {
                 templateToDelete = template
@@ -328,19 +330,30 @@ private fun TemplateItemCard(
         verticalAlignment = Alignment.CenterVertically
       ) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-          Box(
-            modifier = Modifier
-              .size(38.dp)
-              .clip(RoundedCornerShape(8.dp))
-              .background(MaterialTheme.colorScheme.primaryContainer),
-            contentAlignment = Alignment.Center
-          ) {
-            Icon(
-              imageVector = Icons.Filled.Tune,
-              contentDescription = null,
-              tint = MaterialTheme.colorScheme.primary,
-              modifier = Modifier.size(20.dp)
+          if (template.sampleImageUri.isNotBlank()) {
+            AsyncImage(
+              model = template.sampleImageUri,
+              contentDescription = "Screenshot Template",
+              modifier = Modifier
+                .size(42.dp)
+                .clip(RoundedCornerShape(8.dp)),
+              contentScale = androidx.compose.ui.layout.ContentScale.Crop
             )
+          } else {
+            Box(
+              modifier = Modifier
+                .size(42.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(MaterialTheme.colorScheme.primaryContainer),
+              contentAlignment = Alignment.Center
+            ) {
+              Icon(
+                imageVector = Icons.Filled.Tune,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp)
+              )
+            }
           }
           Spacer(modifier = Modifier.width(10.dp))
           Column(modifier = Modifier.weight(1f)) {
@@ -361,15 +374,16 @@ private fun TemplateItemCard(
           }
         }
 
-        if (!template.isBuiltIn) {
-          IconButton(onClick = onDelete) {
-            Icon(
-              Icons.Filled.Delete,
-              contentDescription = "Hapus Template",
-              tint = MaterialTheme.colorScheme.error,
-              modifier = Modifier.size(20.dp)
-            )
-          }
+        IconButton(
+          onClick = onDelete,
+          modifier = Modifier.testTag("btn_delete_template_${template.id}")
+        ) {
+          Icon(
+            Icons.Filled.Delete,
+            contentDescription = "Hapus Template",
+            tint = MaterialTheme.colorScheme.error,
+            modifier = Modifier.size(20.dp)
+          )
         }
       }
 

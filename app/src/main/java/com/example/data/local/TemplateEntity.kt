@@ -16,6 +16,7 @@ data class TemplateEntity(
   val amountPattern: String,
   val isBuiltIn: Boolean = true,
   val areaConfigJson: String = "",
+  val sampleImageUri: String = "",
 ) {
   fun toModel(): OcrTemplate =
     OcrTemplate(
@@ -28,6 +29,7 @@ data class TemplateEntity(
       amountPattern = amountPattern,
       isBuiltIn = isBuiltIn,
       areaConfigJson = areaConfigJson,
+      sampleImageUri = sampleImageUri,
     )
 
   companion object {
@@ -42,6 +44,7 @@ data class TemplateEntity(
         amountPattern = model.amountPattern,
         isBuiltIn = model.isBuiltIn,
         areaConfigJson = model.areaConfigJson,
+        sampleImageUri = model.sampleImageUri,
       )
   }
 }

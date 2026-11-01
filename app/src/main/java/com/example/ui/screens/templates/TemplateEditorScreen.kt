@@ -114,6 +114,8 @@ import com.example.data.ocr.MlKitTextRecognizer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.FileOutputStream
 import java.util.UUID
 import kotlin.math.roundToInt
 
@@ -143,10 +145,39 @@ fun TemplateEditorScreen(
   val density = LocalDensity.current
   val scope = rememberCoroutineScope()
 
+  fun persistImageToInternalStorage(sourceUri: Uri): String {
+    return try {
+      if (sourceUri.scheme == "file") {
+        val file = File(sourceUri.path ?: "")
+        if (file.exists() && file.parentFile?.name == "template_images") {
+          return sourceUri.toString()
+        }
+      }
+      val dir = File(context.filesDir, "template_images").apply { mkdirs() }
+      val destFile = File(dir, "tpl_${System.currentTimeMillis()}_${UUID.randomUUID().toString().take(6)}.jpg")
+      context.contentResolver.openInputStream(sourceUri)?.use { input ->
+        FileOutputStream(destFile).use { output ->
+          input.copyTo(output)
+        }
+      }
+      Uri.fromFile(destFile).toString()
+    } catch (e: Exception) {
+      android.util.Log.e("TemplateEditor", "Gagal menyimpan gambar template: ${e.message}")
+      sourceUri.toString()
+    }
+  }
+
   var templateName by remember { mutableStateOf(initialTemplate?.bankName ?: "") }
   var category by remember { mutableStateOf(initialTemplate?.category ?: "Bank Transfer") }
   var detectionKeywords by remember { mutableStateOf(initialTemplate?.detectionKeywords ?: "") }
-  var currentImageUri by remember { mutableStateOf<Uri?>(initialImageUri) }
+  var currentImageUri by remember {
+    val initialUri = initialImageUri ?: initialTemplate?.sampleImageUri?.takeIf { it.isNotBlank() }?.let { Uri.parse(it) }
+    val safeUri = initialUri?.let { uri ->
+      val persistentPath = persistImageToInternalStorage(uri)
+      Uri.parse(persistentPath)
+    }
+    mutableStateOf<Uri?>(safeUri)
+  }
 
   // Toolbar visibility state (Hide / Show Menu)
   var isToolbarVisible by remember { mutableStateOf(true) }
@@ -217,7 +248,8 @@ fun TemplateEditorScreen(
     contract = ActivityResultContracts.PickVisualMedia(),
     onResult = { uri ->
       if (uri != null) {
-        currentImageUri = uri
+        val persistentPath = persistImageToInternalStorage(uri)
+        currentImageUri = Uri.parse(persistentPath)
         cachedOcrResult = null
         // Reset zoom & pan on new image
         zoomScale = 1.0f
@@ -838,6 +870,10 @@ fun TemplateEditorScreen(
                   }
 
                   val areaJson = AreaConfigHelper.toJson(areas.value)
+                  val savedImageString = currentImageUri?.let { uri ->
+                    persistImageToInternalStorage(uri)
+                  } ?: initialTemplate?.sampleImageUri ?: ""
+
                   val updated = (initialTemplate ?: OcrTemplate(
                     bankName = templateName.trim(),
                     category = category,
@@ -846,13 +882,15 @@ fun TemplateEditorScreen(
                     accountPattern = "",
                     amountPattern = "",
                     isBuiltIn = false,
-                    areaConfigJson = areaJson
+                    areaConfigJson = areaJson,
+                    sampleImageUri = savedImageString
                   )).copy(
                     bankName = templateName.trim(),
                     category = category,
                     detectionKeywords = detectionKeywords.ifBlank { templateName.trim() },
                     areaConfigJson = areaJson,
-                    isBuiltIn = false
+                    isBuiltIn = false,
+                    sampleImageUri = savedImageString
                   )
 
                   onSaveTemplate(updated)
