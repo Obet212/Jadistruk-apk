@@ -39,6 +39,7 @@ class ReceiptViewModel(application: Application) : AndroidViewModel(application)
   val textRecognizer = MlKitTextRecognizer(application)
   val thermalPrinter = com.example.data.printer.BluetoothThermalPrinter(application)
   val remoteConfigManager = com.example.data.remote.RemoteConfigManager(application)
+  val backupManager = com.example.data.backup.BackupManager(application, settingsManager, templateDao)
 
   val settings: StateFlow<PrintSettings> = settingsManager.settings
 
@@ -244,6 +245,30 @@ class ReceiptViewModel(application: Application) : AndroidViewModel(application)
       val res = thermalPrinter.printReceipt(receipt, settings.value)
       onResult(res)
     }
+  }
+
+  suspend fun createBackupPayload(): com.example.data.backup.BackupPackage {
+    return backupManager.createBackupPayload()
+  }
+
+  suspend fun createCacheBackupFile(payloadJson: String): java.io.File {
+    return backupManager.createCacheBackupFile(payloadJson)
+  }
+
+  suspend fun writeBackupToDestination(uri: Uri, payloadJson: String) {
+    backupManager.writeBackupToDestination(uri, payloadJson)
+  }
+
+  fun shareBackupFile(file: java.io.File) {
+    backupManager.shareBackupFile(file)
+  }
+
+  suspend fun validateAndParseBackup(uri: Uri): Result<com.example.data.backup.BackupPackage> {
+    return backupManager.validateAndParseBackup(uri)
+  }
+
+  suspend fun restoreFromBackup(backupPackage: com.example.data.backup.BackupPackage): Result<Int> {
+    return backupManager.restoreFromBackup(backupPackage)
   }
 
   override fun onCleared() {

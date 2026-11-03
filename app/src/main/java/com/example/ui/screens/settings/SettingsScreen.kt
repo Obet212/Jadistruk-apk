@@ -71,17 +71,29 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.FileDownload
+import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.SettingsBackupRestore
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.SystemUpdate
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.runtime.rememberCoroutineScope
 import com.example.BuildConfig
+import com.example.data.backup.BackupManager
+import com.example.data.backup.BackupPackage
 import com.example.data.model.AdminFeeRule
 import com.example.data.model.AppTheme
 import com.example.data.model.PrintSettings
 import com.example.data.model.ReceiptTheme
 import com.example.data.remote.AppUpdateStatus
+import java.io.File
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -92,8 +104,52 @@ fun SettingsScreen(
   onTestPrint: ((com.example.data.printer.PrintResult) -> Unit) -> Unit = {},
   appUpdateStatus: AppUpdateStatus = AppUpdateStatus.UpToDate(BuildConfig.VERSION_NAME, BuildConfig.VERSION_NAME),
   onCheckForUpdate: () -> Unit = {},
+  backupManager: BackupManager? = null,
 ) {
   val context = LocalContext.current
+  val coroutineScope = rememberCoroutineScope()
+
+  // Backup & Restore states
+  var isBackingUp by remember { mutableStateOf(false) }
+  var createdBackupPackage by remember { mutableStateOf<BackupPackage?>(null) }
+  var createdBackupFile by remember { mutableStateOf<File?>(null) }
+  var showBackupSuccessDialog by remember { mutableStateOf(false) }
+  var isRestoring by remember { mutableStateOf(false) }
+  var pendingRestorePackage by remember { mutableStateOf<BackupPackage?>(null) }
+  var restoreErrorMessage by remember { mutableStateOf<String?>(null) }
+  var restoreSuccessMessage by remember { mutableStateOf<String?>(null) }
+
+  val saveDocLauncher = rememberLauncherForActivityResult(
+    ActivityResultContracts.CreateDocument("application/octet-stream")
+  ) { destinationUri ->
+    if (destinationUri != null && createdBackupPackage != null) {
+      coroutineScope.launch {
+        try {
+          backupManager?.writeBackupToDestination(destinationUri, createdBackupPackage!!.rawJson)
+          Toast.makeText(context, "✓ File backup berhasil disimpan ke penyimpanan HP!", Toast.LENGTH_LONG).show()
+        } catch (e: Exception) {
+          Toast.makeText(context, "Gagal menyimpan file: ${e.message}", Toast.LENGTH_LONG).show()
+        }
+      }
+    }
+  }
+
+  val openDocLauncher = rememberLauncherForActivityResult(
+    ActivityResultContracts.OpenDocument()
+  ) { sourceUri ->
+    if (sourceUri != null && backupManager != null) {
+      coroutineScope.launch {
+        isRestoring = true
+        val result = backupManager.validateAndParseBackup(sourceUri)
+        isRestoring = false
+        result.onSuccess { pkg ->
+          pendingRestorePackage = pkg
+        }.onFailure { err ->
+          restoreErrorMessage = err.message ?: "Format file tidak valid atau rusak."
+        }
+      }
+    }
+  }
 
   var storeName by remember(currentSettings) { mutableStateOf(currentSettings.storeName) }
   var storeAddress by remember(currentSettings) { mutableStateOf(currentSettings.storeAddress) }
@@ -815,7 +871,142 @@ fun SettingsScreen(
         }
       }
 
-      // 7. Save Button
+      // 7. Backup & Pemulihan Data (.jadistruk)
+      item {
+        Card(
+          modifier = Modifier
+            .fillMaxWidth()
+            .testTag("card_backup_restore"),
+          shape = RoundedCornerShape(14.dp),
+          colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+          elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        ) {
+          Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+              modifier = Modifier.fillMaxWidth(),
+              verticalAlignment = Alignment.CenterVertically
+            ) {
+              Box(
+                modifier = Modifier
+                  .size(38.dp)
+                  .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+                contentAlignment = Alignment.Center
+              ) {
+                Icon(
+                  imageVector = Icons.Filled.SettingsBackupRestore,
+                  contentDescription = null,
+                  tint = MaterialTheme.colorScheme.primary,
+                  modifier = Modifier.size(22.dp)
+                )
+              }
+              Spacer(modifier = Modifier.width(12.dp))
+              Column(modifier = Modifier.weight(1f)) {
+                Text(
+                  text = "Backup & Pemulihan Data",
+                  style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                  color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                  text = "Ekspor & impor seluruh konfigurasi (.jadistruk)",
+                  style = MaterialTheme.typography.bodySmall,
+                  color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+              }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Surface(
+              shape = RoundedCornerShape(10.dp),
+              color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+              modifier = Modifier.fillMaxWidth()
+            ) {
+              Column(
+                modifier = Modifier.padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+              ) {
+                Text(
+                  text = "Simpan seluruh template struk (termasuk gambar screenshot), identitas toko, tema, dan preferensi printer ke dalam satu file .jadistruk untuk dicadangkan atau dipulihkan ke HP baru.",
+                  style = MaterialTheme.typography.bodySmall,
+                  color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+              }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Row(
+              modifier = Modifier.fillMaxWidth(),
+              horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+              // Tombol SIMPAN BACKUP
+              Button(
+                onClick = {
+                  if (backupManager != null) {
+                    coroutineScope.launch {
+                      isBackingUp = true
+                      try {
+                        val pkg = backupManager.createBackupPayload()
+                        val cacheFile = backupManager.createCacheBackupFile(pkg.rawJson)
+                        createdBackupPackage = pkg
+                        createdBackupFile = cacheFile
+                        showBackupSuccessDialog = true
+                      } catch (e: Exception) {
+                        Toast.makeText(context, "Gagal membuat backup: ${e.message}", Toast.LENGTH_LONG).show()
+                      } finally {
+                        isBackingUp = false
+                      }
+                    }
+                  } else {
+                    Toast.makeText(context, "Layanan backup belum siap.", Toast.LENGTH_SHORT).show()
+                  }
+                },
+                modifier = Modifier
+                  .weight(1f)
+                  .testTag("btn_simpan_backup"),
+                shape = RoundedCornerShape(10.dp),
+                enabled = !isBackingUp && !isRestoring
+              ) {
+                Icon(Icons.Filled.FileDownload, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                  if (isBackingUp) "Memproses..." else "SIMPAN BACKUP",
+                  style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
+                )
+              }
+
+              // Tombol PULIHKAN BACKUP
+              OutlinedButton(
+                onClick = {
+                  if (backupManager != null) {
+                    try {
+                      openDocLauncher.launch(arrayOf("*/*", "application/octet-stream"))
+                    } catch (e: Exception) {
+                      Toast.makeText(context, "Gagal membuka pengelola file: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
+                  } else {
+                    Toast.makeText(context, "Layanan pemulihan belum siap.", Toast.LENGTH_SHORT).show()
+                  }
+                },
+                modifier = Modifier
+                  .weight(1f)
+                  .testTag("btn_pulihkan_backup"),
+                shape = RoundedCornerShape(10.dp),
+                enabled = !isBackingUp && !isRestoring
+              ) {
+                Icon(Icons.Filled.FileUpload, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                  if (isRestoring) "Membaca..." else "PULIHKAN BACKUP",
+                  style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
+                )
+              }
+            }
+          }
+        }
+      }
+
+      // 8. Save Button
       item {
         Button(
           onClick = {
@@ -1268,6 +1459,226 @@ fun SettingsScreen(
         }
       },
       dismissButton = null
+    )
+  }
+
+  // DIALOG 1: BACKUP BERHASIL DIBUAT (SIMPAN KE HP / BAGIKAN)
+  if (showBackupSuccessDialog && createdBackupPackage != null) {
+    val pkg = createdBackupPackage!!
+    val file = createdBackupFile
+    AlertDialog(
+      onDismissRequest = { showBackupSuccessDialog = false },
+      icon = {
+        Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+      },
+      title = {
+        Text("Backup Berhasil Dibuat", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
+      },
+      text = {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+          Text(
+            text = "Seluruh data pengaturan, identitas toko, tema, dan template struk (termasuk gambar) telah dikemas ke file .jadistruk:",
+            style = MaterialTheme.typography.bodySmall
+          )
+          Surface(
+            shape = RoundedCornerShape(10.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            modifier = Modifier.fillMaxWidth()
+          ) {
+            Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+              Text("• Berkas: .jadistruk (Versi ${pkg.metadata.version})", style = MaterialTheme.typography.bodySmall)
+              Text("• Toko: ${pkg.metadata.storeName}", style = MaterialTheme.typography.bodySmall)
+              Text("• Template: ${pkg.metadata.templateCount} template (lengkap dengan data area & gambar)", style = MaterialTheme.typography.bodySmall)
+              Text("• Tanggal: ${pkg.metadata.formattedDate}", style = MaterialTheme.typography.bodySmall)
+              if (file != null) {
+                Text("• Ukuran: ${file.length() / 1024} KB", style = MaterialTheme.typography.bodySmall)
+              }
+            }
+          }
+          Spacer(modifier = Modifier.height(2.dp))
+          Text(
+            text = "Silakan simpan file ke memori HP atau langsung bagikan ke WhatsApp / Bluetooth:",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+          )
+        }
+      },
+      confirmButton = {
+        Row(
+          modifier = Modifier.fillMaxWidth(),
+          horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+          OutlinedButton(
+            onClick = {
+              val timestamp = java.text.SimpleDateFormat("yyyyMMdd_HHmm", java.util.Locale.getDefault()).format(java.util.Date())
+              saveDocLauncher.launch("backup_jadistruk_$timestamp.jadistruk")
+            },
+            modifier = Modifier.weight(1f),
+            shape = RoundedCornerShape(8.dp)
+          ) {
+            Icon(Icons.Filled.FileDownload, contentDescription = null, modifier = Modifier.size(16.dp))
+            Spacer(modifier = Modifier.width(4.dp))
+            Text("Simpan ke HP", maxLines = 1)
+          }
+          Button(
+            onClick = {
+              if (file != null && backupManager != null) {
+                backupManager.shareBackupFile(file)
+              }
+            },
+            modifier = Modifier.weight(1f),
+            shape = RoundedCornerShape(8.dp)
+          ) {
+            Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(16.dp))
+            Spacer(modifier = Modifier.width(4.dp))
+            Text("Bagikan", maxLines = 1)
+          }
+        }
+      },
+      dismissButton = {
+        TextButton(onClick = { showBackupSuccessDialog = false }) {
+          Text("Selesai")
+        }
+      }
+    )
+  }
+
+  // DIALOG 2: KONFIRMASI PEMULIHAN DATA (PULIHKAN BACKUP)
+  if (pendingRestorePackage != null) {
+    val pkg = pendingRestorePackage!!
+    AlertDialog(
+      onDismissRequest = {
+        if (!isRestoring) pendingRestorePackage = null
+      },
+      icon = {
+        Icon(Icons.Filled.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+      },
+      title = {
+        Text("Konfirmasi Pemulihan Data", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
+      },
+      text = {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+          Text(
+            text = "Ditemukan file backup resmi JadiStruk yang valid:",
+            style = MaterialTheme.typography.bodySmall
+          )
+          Surface(
+            shape = RoundedCornerShape(10.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            modifier = Modifier.fillMaxWidth()
+          ) {
+            Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+              Text("• Toko: ${pkg.metadata.storeName}", style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold))
+              Text("• Tanggal Backup: ${pkg.metadata.formattedDate}", style = MaterialTheme.typography.bodySmall)
+              Text("• Versi Aplikasi: v${pkg.metadata.appVersion}", style = MaterialTheme.typography.bodySmall)
+              Text("• Jumlah Template: ${pkg.metadata.templateCount} template (termasuk gambar & area)", style = MaterialTheme.typography.bodySmall)
+            }
+          }
+          Spacer(modifier = Modifier.height(2.dp))
+          Text(
+            text = "PERINGATAN:\nSeluruh pengaturan toko, tema tampilan, konfigurasi printer, dan template yang ada saat ini akan digantikan dengan data dari file backup ini.",
+            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
+            color = MaterialTheme.colorScheme.error
+          )
+          Text(
+            text = "Apakah Anda yakin ingin memulihkan seluruh data?",
+            style = MaterialTheme.typography.bodySmall
+          )
+        }
+      },
+      confirmButton = {
+        Button(
+          onClick = {
+            if (backupManager != null) {
+              coroutineScope.launch {
+                isRestoring = true
+                val res = backupManager.restoreFromBackup(pkg)
+                isRestoring = false
+                pendingRestorePackage = null
+                res.onSuccess { count ->
+                  val s = pkg.settings
+                  storeName = s.storeName
+                  storeAddress = s.storeAddress
+                  storePhone = s.storePhone
+                  footerMessage = s.footerMessage
+                  paperWidthMm = s.paperWidthMm
+                  showDate = s.showDate
+                  showRefNumber = s.showRefNumber
+                  autoAddHeader = s.autoAddHeader
+                  autoApplyAdminFee = s.autoApplyAdminFee
+                  adminFeeRules = s.adminFeeRules
+                  selectedPrinterAddress = s.selectedPrinterAddress
+                  selectedPrinterName = s.selectedPrinterName
+                  autoCutPaper = s.autoCutPaper
+                  printFeedLines = s.printFeedLines
+                  receiptTheme = s.receiptTheme
+                  appTheme = s.appTheme
+
+                  restoreSuccessMessage = "Data berhasil dipulihkan! Sebanyak $count template struk, gambar, tema tampilan, dan seluruh konfigurasi toko telah dikembalikan seperti semula."
+                }.onFailure { err ->
+                  restoreErrorMessage = "Gagal memulihkan data: ${err.message}"
+                }
+              }
+            }
+          },
+          colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+          enabled = !isRestoring
+        ) {
+          Text(if (isRestoring) "Memulihkan..." else "PULIHKAN SEKARANG")
+        }
+      },
+      dismissButton = {
+        TextButton(
+          onClick = { pendingRestorePackage = null },
+          enabled = !isRestoring
+        ) {
+          Text("BATAL")
+        }
+      }
+    )
+  }
+
+  // DIALOG 3: NOTIFIKASI ERROR PEMULIHAN
+  if (restoreErrorMessage != null) {
+    AlertDialog(
+      onDismissRequest = { restoreErrorMessage = null },
+      icon = {
+        Icon(Icons.Filled.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+      },
+      title = { Text("Pemulihan Dibatalkan") },
+      text = {
+        Text(
+          text = restoreErrorMessage!!,
+          style = MaterialTheme.typography.bodyMedium
+        )
+      },
+      confirmButton = {
+        Button(onClick = { restoreErrorMessage = null }) {
+          Text("Mengerti")
+        }
+      }
+    )
+  }
+
+  // DIALOG 4: NOTIFIKASI SUKSES PEMULIHAN
+  if (restoreSuccessMessage != null) {
+    AlertDialog(
+      onDismissRequest = { restoreSuccessMessage = null },
+      icon = {
+        Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+      },
+      title = { Text("Pemulihan Berhasil!") },
+      text = {
+        Text(
+          text = restoreSuccessMessage!!,
+          style = MaterialTheme.typography.bodyMedium
+        )
+      },
+      confirmButton = {
+        Button(onClick = { restoreSuccessMessage = null }) {
+          Text("Selesai")
+        }
+      }
     )
   }
 }

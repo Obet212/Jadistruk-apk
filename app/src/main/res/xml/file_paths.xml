@@ -2,4 +2,7 @@
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
     <cache-path name="shared_receipts" path="receipts/" />
     <cache-path name="cache_root" path="." />
+    <cache-path name="backup_cache" path="backups/" />
+    <files-path name="files_root" path="." />
+    <files-path name="template_images" path="template_images/" />
 </paths>

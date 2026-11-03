@@ -1,14 +1,9 @@
 package com.example.ui.screens.detail
 
-import android.graphics.Paint
-import android.graphics.Path
-import android.graphics.Typeface
-import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -17,6 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -32,24 +28,25 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.nativeCanvas
-import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.PrintSettings
 import com.example.data.model.Receipt
 import com.example.data.printer.ReceiptFormatter
-import kotlin.math.min
+import com.example.data.printer.ThermalReceiptRenderer
 
 /**
- * Mesin rendering pratinjau struk thermal 100% identik dengan hasil cetak printer fisik.
+ * Mesin rendering pratinjau struk thermal digital JADISTRUK 100% presisi.
  *
- * Menggunakan mesin layout baris dan data yang sama persis dengan modul Bluetooth ESC/POS:
- * - 58 mm: 32 kolom karakter monospaced Font A
- * - 88 mm: 48 kolom karakter monospaced Font A
- * - Menjamin posisi huruf, spasi, divider, margin kertas, dan jarak antarbaris presisi 1:1,
- *   tidak meluber, tidak bertumpuk, dan tidak terpotong.
+ * Menggunakan ThermalReceiptRenderer global yang teruji:
+ * - Ukuran dokumen berbasis standar fisik gulungan thermal: 58 mm (32 kolom) & 88 mm (48 kolom).
+ * - Grid karakter monospaced terkunci presisi, mencegah subpixel drift dan teks melebar.
+ * - Sistem baris non-overlapping yang mengunci baseline di tengah slot, mencegah teks bertumpuk.
+ * - Menghasilkan bitmap berkualitas tinggi yang identik dengan output ekspor gambar JPG.
  */
 @Composable
 fun ThermalReceiptPreview(
@@ -57,12 +54,17 @@ fun ThermalReceiptPreview(
   settings: PrintSettings,
   modifier: Modifier = Modifier
 ) {
-  val density = LocalDensity.current
   val lineWidth = remember(settings.paperWidthMm) {
     ReceiptFormatter.getLineWidth(settings.paperWidthMm)
   }
-  val formattedLines = remember(receipt, settings) {
-    ReceiptFormatter.getFormattedLines(receipt, settings)
+
+  // Pre-render bitmap dokumen struk menggunakan mesin kanonikal global
+  val receiptBitmap = remember(receipt, settings) {
+    ThermalReceiptRenderer.renderReceiptBitmap(
+      receipt = receipt,
+      settings = settings,
+      includeCutterEffect = true
+    )
   }
 
   Column(
@@ -113,163 +115,39 @@ fun ThermalReceiptPreview(
       }
     }
 
-    Spacer(modifier = Modifier.height(6.dp))
+    Spacer(modifier = Modifier.height(8.dp))
 
-    // Container kertas thermal dengan kalkulasi ukuran proporsional
-    BoxWithConstraints(
+    // Container kertas thermal mandiri (independen dari ukuran layar / resolusi / DPI)
+    // 58 mm: 290.dp, 88 mm: 360.dp (proporsional terhadap gulungan fisik)
+    val paperWidthDp = if (lineWidth == 48) 360.dp else 290.dp
+
+    Box(
       modifier = Modifier
         .fillMaxWidth()
         .horizontalScroll(rememberScrollState()),
       contentAlignment = Alignment.Center
     ) {
-      val availableWidthDp = maxWidth
-      val is88mm = lineWidth == 48
-
-      // Menentukan lebar kertas fisik proporsional terhadap layar agar pas dan tidak meluber
-      val targetPaperWidthDp = if (is88mm) {
-        min(availableWidthDp.value - 12f, 420f).coerceAtLeast(320f)
-      } else {
-        min(availableWidthDp.value - 16f, 320f).coerceAtLeast(270f)
-      }
-
-      val actualPaperWidthDp = targetPaperWidthDp.dp
-      val sideMarginDp = if (is88mm) 12.dp else 10.dp
-
-      val paperWidthPx = with(density) { actualPaperWidthDp.toPx() }
-      val sideMarginPx = with(density) { sideMarginDp.toPx() }
-      val printableWidthPx = paperWidthPx - (sideMarginPx * 2f)
-
-      // 1. Kalibrasi Font Monospace Presisi Karakter
-      // Probe teks memastikan tepat 'lineWidth' karakter mengisi printableWidthPx tanpa subpixel drift
-      val testPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        typeface = Typeface.MONOSPACE
-        textSize = 20f
-      }
-      val sampleProbe = "0".repeat(lineWidth)
-      val sampleMeasuredWidth = testPaint.measureText(sampleProbe)
-      val exactBaseTextSize = 20f * (printableWidthPx / sampleMeasuredWidth)
-
-      val normalPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = android.graphics.Color.rgb(22, 22, 22)
-        typeface = Typeface.MONOSPACE
-        textSize = exactBaseTextSize
-      }
-
-      val boldPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = android.graphics.Color.rgb(10, 10, 10)
-        typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
-        textSize = exactBaseTextSize
-      }
-
-      val doubleHeightPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = android.graphics.Color.rgb(0, 0, 0)
-        typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
-        textSize = exactBaseTextSize * 1.25f
-        // textScaleX mengunci lebar karakter tetap 1 kolom sehingga teks tidak melebar keluar kertas
-        textScaleX = 0.8f
-      }
-
-      // 2. Kalkulasi Tinggi & Jarak Antarbaris Dinamis dari Font Metrics (Mencegah teks bertumpuk)
-      val normalMetrics = normalPaint.fontMetrics
-      val normalLineAdvancePx = (normalMetrics.descent - normalMetrics.ascent) * 1.15f
-
-      val doubleMetrics = doubleHeightPaint.fontMetrics
-      val doubleLineAdvancePx = (doubleMetrics.descent - doubleMetrics.ascent) * 1.15f
-
-      val topMarginPx = with(density) { 18.dp.toPx() }
-      val bottomMarginPx = with(density) { 24.dp.toPx() }
-      val feedLinesMarginPx = with(density) { (settings.printFeedLines * 12).dp.toPx() }
-
-      val totalHeightDp = remember(formattedLines, normalLineAdvancePx, doubleLineAdvancePx, settings.printFeedLines) {
-        var hPx = topMarginPx + bottomMarginPx + feedLinesMarginPx
-        for (line in formattedLines) {
-          hPx += if (line.isDoubleHeight) doubleLineAdvancePx else normalLineAdvancePx
-        }
-        with(density) { hPx.toDp() }
-      }
-
-      val totalHeightPx = with(density) { totalHeightDp.toPx() }
-
-      // Komponen Fisik Kertas Thermal
       Box(
         modifier = Modifier
-          .width(actualPaperWidthDp)
+          .width(paperWidthDp)
           .shadow(
-            elevation = 3.dp,
+            elevation = 4.dp,
             shape = RoundedCornerShape(2.dp),
             clip = false,
             ambientColor = Color(0x33000000),
             spotColor = Color(0x22000000)
           )
-          .border(0.8.dp, Color(0xFFD6D6CE))
           .background(Color(0xFFFAFAF7))
       ) {
-        Canvas(
+        Image(
+          bitmap = receiptBitmap.asImageBitmap(),
+          contentDescription = "Pratinjau Struk Thermal",
           modifier = Modifier
             .fillMaxWidth()
-            .height(totalHeightDp)
-        ) {
-          val canvas = drawContext.canvas.nativeCanvas
-
-          // A. Efek Gigi Pemotong Kertas Thermal (Serrated Cutter Edge) di Atas
-          val tearPathTop = Path()
-          val toothWidth = 8f
-          val toothHeight = 4f
-          var tx = 0f
-          tearPathTop.moveTo(0f, 0f)
-          while (tx < paperWidthPx) {
-            tearPathTop.lineTo(tx + toothWidth / 2f, toothHeight)
-            tearPathTop.lineTo(tx + toothWidth, 0f)
-            tx += toothWidth
-          }
-          tearPathTop.close()
-
-          val tearPaint = Paint().apply {
-            color = android.graphics.Color.rgb(228, 228, 220)
-            style = Paint.Style.STROKE
-            strokeWidth = 1.2f
-            isAntiAlias = true
-          }
-          canvas.drawPath(tearPathTop, tearPaint)
-
-          // B. Gambar Setiap Baris Sesuai Mesin Layout Presisi
-          var currentY = topMarginPx
-
-          for (line in formattedLines) {
-            val paint = when {
-              line.isDoubleHeight -> doubleHeightPaint
-              line.isBold -> boldPaint
-              else -> normalPaint
-            }
-            val lineAdvance = if (line.isDoubleHeight) doubleLineAdvancePx else normalLineAdvancePx
-            val baselineY = currentY - paint.fontMetrics.ascent
-
-            if (line.text.isNotBlank()) {
-              val textWidth = paint.measureText(line.text)
-              val x = if (line.isCentered) {
-                sideMarginPx + ((printableWidthPx - textWidth) / 2f).coerceAtLeast(0f)
-              } else {
-                sideMarginPx
-              }
-              canvas.drawText(line.text, x, baselineY, paint)
-            }
-
-            currentY += lineAdvance
-          }
-
-          // C. Garis Potong Kertas Thermal di Bawah
-          val tearPathBottom = Path()
-          val by = totalHeightPx
-          var bx = 0f
-          tearPathBottom.moveTo(0f, by)
-          while (bx < paperWidthPx) {
-            tearPathBottom.lineTo(bx + toothWidth / 2f, by - toothHeight)
-            tearPathBottom.lineTo(bx + toothWidth, by)
-            bx += toothWidth
-          }
-          tearPathBottom.close()
-          canvas.drawPath(tearPathBottom, tearPaint)
-        }
+            .wrapContentHeight(),
+          contentScale = ContentScale.FillWidth,
+          filterQuality = FilterQuality.High
+        )
       }
     }
   }

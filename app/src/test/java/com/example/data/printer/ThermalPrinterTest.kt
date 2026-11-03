@@ -187,4 +187,61 @@ class ThermalPrinterTest {
     assertTrue(text.contains("TOTAL BAYAR"))
     assertTrue(text.contains("Rp 752.000"))
   }
+
+  @Test
+  fun testThermalReceiptRendererDimensions58mm() {
+    val receipt = Receipt(
+      id = 105,
+      recipientBank = "BCA",
+      recipientAccount = "1234567890",
+      recipientName = "BUDI SANTOSO",
+      amount = 500000,
+      adminFee = 2500,
+      transactionDate = "25/10/2026 14:30 WIB"
+    )
+    for (theme in com.example.data.model.ReceiptTheme.entries) {
+      val settings = PrintSettings(
+        paperWidthMm = 58,
+        receiptTheme = theme
+      )
+      val dim = ThermalReceiptRenderer.calculateDimensions(receipt, settings)
+      assertEquals(720f, dim.documentWidth, 0.001f)
+      assertEquals(32, dim.lineWidth)
+      assertEquals(20.0f, dim.colWidth, 0.001f)
+      assertEquals(40f, dim.sideMargin, 0.001f)
+      assertEquals(640f, dim.printableWidth, 0.001f)
+      assertTrue(dim.documentHeight > 240f)
+      assertTrue(dim.normalLineHeight > dim.colWidth)
+      assertTrue(dim.doubleLineHeight > dim.normalLineHeight)
+    }
+  }
+
+  @Test
+  fun testThermalReceiptRendererDimensions88mm() {
+    val receipt = Receipt(
+      id = 106,
+      recipientBank = "MANDIRI",
+      recipientAccount = "9876543210",
+      recipientName = "SITI RAHMAH",
+      amount = 1250000,
+      adminFee = 3000,
+      transactionDate = "25/10/2026 15:00 WIB"
+    )
+    for (theme in com.example.data.model.ReceiptTheme.entries) {
+      val settings = PrintSettings(
+        paperWidthMm = 88,
+        receiptTheme = theme
+      )
+      val dim = ThermalReceiptRenderer.calculateDimensions(receipt, settings)
+      assertEquals(960f, dim.documentWidth, 0.001f)
+      assertEquals(48, dim.lineWidth)
+      assertEquals(18.0f, dim.colWidth, 0.001f)
+      assertEquals(48f, dim.sideMargin, 0.001f)
+      assertEquals(864f, dim.printableWidth, 0.001f)
+      assertTrue(dim.documentHeight > 240f)
+      assertTrue(dim.normalLineHeight > dim.colWidth)
+      assertTrue(dim.doubleLineHeight > dim.normalLineHeight)
+    }
+  }
 }
+

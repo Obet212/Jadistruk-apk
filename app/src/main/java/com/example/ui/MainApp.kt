@@ -212,7 +212,8 @@ fun MainApp(
             appUpdateStatus = appUpdateStatus,
             onCheckForUpdate = {
               viewModel.checkForAppUpdate()
-            }
+            },
+            backupManager = viewModel.backupManager
           )
         }
 

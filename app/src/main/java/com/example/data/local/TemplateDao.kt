@@ -30,4 +30,13 @@ interface TemplateDao {
 
   @Query("SELECT COUNT(*) FROM ocr_templates")
   suspend fun getTemplateCount(): Int
+
+  @Query("SELECT * FROM ocr_templates ORDER BY isBuiltIn DESC, bankName ASC")
+  suspend fun getAllTemplatesList(): List<TemplateEntity>
+
+  @Insert(onConflict = OnConflictStrategy.REPLACE)
+  suspend fun insertOrReplaceTemplates(templates: List<TemplateEntity>)
+
+  @Query("DELETE FROM ocr_templates")
+  suspend fun deleteAllTemplates()
 }
