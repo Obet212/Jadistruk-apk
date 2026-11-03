@@ -56,7 +56,7 @@ class RemoteConfigManager(private val context: Context) {
     const val KEY_UPDATE_MESSAGE = "update_message"
     const val KEY_UPDATE_URL = "update_url"
 
-    private const val DEFAULT_LATEST_VERSION = "1.7"
+    private const val DEFAULT_LATEST_VERSION = "1.8"
     private const val DEFAULT_MINIMUM_VERSION = "1.0"
     private const val DEFAULT_UPDATE_TITLE = "Pembaruan Aplikasi Tersedia"
     private const val DEFAULT_UPDATE_MESSAGE =
