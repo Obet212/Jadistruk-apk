@@ -243,5 +243,57 @@ class ThermalPrinterTest {
       assertTrue(dim.doubleLineHeight > dim.normalLineHeight)
     }
   }
+
+  @Test
+  fun testTwoColumnsOrWrappedLeftAndRightCol() {
+    // Normal single-line pair
+    val single = ReceiptFormatter.twoColumnsOrWrapped("Jumlah", "Rp 50.000", 32)
+    assertEquals(1, single.size)
+    assertEquals("Jumlah", single[0].leftCol)
+    assertEquals("Rp 50.000", single[0].rightCol)
+    assertTrue(single[0].text.endsWith("Rp 50.000"))
+
+    // Long right column wrapping
+    val longRight = ReceiptFormatter.twoColumnsOrWrapped("Penerima", "MUHAMMAD ARYA PRATAMA KUSUMA", 32)
+    assertTrue(longRight.size > 1)
+    assertEquals("Penerima", longRight[0].leftCol)
+    assertNotNull(longRight[0].rightCol)
+    assertEquals("", longRight[1].leftCol)
+    assertNotNull(longRight[1].rightCol)
+
+    // Long left column wrapping (total length > 32)
+    val longLeft = ReceiptFormatter.twoColumnsOrWrapped("Bank Penyelenggara Layanan Keuangan", "BANK CENTRAL ASIA", 32)
+    assertTrue(longLeft.size > 1)
+    assertNotNull(longLeft[0].leftCol)
+    assertNotNull(longLeft[0].rightCol)
+  }
+
+  @Test
+  fun testAllThemesTwoColumnFields() {
+    val receipt = Receipt(
+      id = 107,
+      recipientBank = "BCA",
+      recipientAccount = "1234567890",
+      recipientName = "BUDI SANTOSO",
+      amount = 500000,
+      adminFee = 2500,
+      transactionDate = "25/10/2026 14:30 WIB",
+      refNumber = "REF998877",
+      notes = "Transfer uang kas"
+    )
+
+    for (theme in com.example.data.model.ReceiptTheme.entries) {
+      val settings = PrintSettings(paperWidthMm = 58, receiptTheme = theme)
+      val lines = ReceiptFormatter.getFormattedLines(receipt, settings)
+
+      val twoColLines = lines.filter { it.leftCol != null || it.rightCol != null }
+      assertTrue("Theme $theme should have structured two-column lines", twoColLines.isNotEmpty())
+
+      // Verifikasi bahwa baris nilai terpenting (Total, Jumlah/Nominal) memiliki kolom terstruktur
+      val totalLine = twoColLines.firstOrNull { it.leftCol?.contains("TOTAL", ignoreCase = true) == true }
+      assertNotNull("Theme $theme must have two-column TOTAL row", totalLine)
+      assertTrue(totalLine?.rightCol?.contains("502.500") == true)
+    }
+  }
 }
 

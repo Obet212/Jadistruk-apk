@@ -193,8 +193,18 @@ object ThermalReceiptRenderer {
     }
 
     // 5. Render baris-baris struk ke dalam slot baris non-overlapping yang stabil
+    // Menggunakan sistem layout dua kolom presisi tinggi:
+    // - Batas kiri area cetak: leftX = dimensions.sideMargin
+    // - Batas kanan area cetak: rightX = dimensions.sideMargin + dimensions.printableWidth
+    // - Kolom kiri (keterangan/label): Paint.Align.LEFT pada leftX
+    // - Kolom kanan (nilai/nominal): Paint.Align.RIGHT pada rightX
+    // Seluruh nilai di kolom kanan dijamin berakhir pada satu garis vertikal yang sama (identik di pratinjau dan JPG).
     val formattedLines = ReceiptFormatter.getFormattedLines(receipt, settings)
     var currentSlotTop = dimensions.topMargin
+
+    val leftX = dimensions.sideMargin
+    val rightX = dimensions.sideMargin + dimensions.printableWidth
+    val centerX = dimensions.sideMargin + (dimensions.printableWidth / 2f)
 
     for (line in formattedLines) {
       val slotHeight = if (line.isDoubleHeight) dimensions.doubleLineHeight else dimensions.normalLineHeight
@@ -209,16 +219,40 @@ object ThermalReceiptRenderer {
       val slotPadding = (slotHeight - glyphHeight) / 2f
       val baselineY = currentSlotTop + slotPadding - fontMetrics.ascent
 
-      if (line.text.isNotBlank()) {
-        val textLength = line.text.length
-        val textWidth = textLength * dimensions.colWidth
-        val startX = if (line.isCentered) {
-          dimensions.sideMargin + ((dimensions.printableWidth - textWidth) / 2f).coerceAtLeast(0f)
-        } else {
-          dimensions.sideMargin
+      val isTwoCol = line.leftCol != null || line.rightCol != null
+      val (resolvedLeft, resolvedRight) = when {
+        isTwoCol -> Pair(line.leftCol, line.rightCol)
+        !line.isCentered && !line.text.startsWith("-") && !line.text.startsWith("=") -> {
+          val match = Regex("^(.+?)\\s{2,}(.+)$").matchEntire(line.text)
+          if (match != null) {
+            Pair(match.groupValues[1].trim(), match.groupValues[2].trim())
+          } else {
+            Pair(null, null)
+          }
         }
+        else -> Pair(null, null)
+      }
 
-        canvas.drawText(line.text, startX, baselineY, paint)
+      if (resolvedLeft != null || resolvedRight != null) {
+        val lText = resolvedLeft ?: ""
+        val rText = resolvedRight ?: ""
+
+        if (lText.isNotEmpty()) {
+          paint.textAlign = Paint.Align.LEFT
+          canvas.drawText(lText, leftX, baselineY, paint)
+        }
+        if (rText.isNotEmpty()) {
+          paint.textAlign = Paint.Align.RIGHT
+          canvas.drawText(rText, rightX, baselineY, paint)
+        }
+      } else if (line.text.isNotBlank()) {
+        if (line.isCentered) {
+          paint.textAlign = Paint.Align.CENTER
+          canvas.drawText(line.text.trim(), centerX, baselineY, paint)
+        } else {
+          paint.textAlign = Paint.Align.LEFT
+          canvas.drawText(line.text, leftX, baselineY, paint)
+        }
       }
 
       currentSlotTop += slotHeight

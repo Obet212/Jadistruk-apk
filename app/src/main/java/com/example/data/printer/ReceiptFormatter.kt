@@ -12,7 +12,9 @@ data class FormattedLine(
   val text: String,
   val isBold: Boolean = false,
   val isDoubleHeight: Boolean = false,
-  val isCentered: Boolean = false
+  val isCentered: Boolean = false,
+  val leftCol: String? = null,
+  val rightCol: String? = null
 )
 
 object ReceiptFormatter {
@@ -388,6 +390,13 @@ object ReceiptFormatter {
    * Menghasilkan satu atau beberapa baris terstruktur untuk dua kolom data,
    * menjamin bahwa tidak ada baris yang panjangnya melebihi lebar kolom kertas (tidak meluber/terpotong).
    */
+  /**
+   * Menghasilkan daftar baris terstruktur untuk layout dua kolom yang stabil:
+   * - Kolom kiri (keterangan/label) rata kiri
+   * - Kolom kanan (nilai/nominal) rata kanan dengan batas akhir yang seragam
+   * - Menyimpan teks mentah (text) untuk printer Bluetooth ESC/POS tanpa perubahan
+   * - Menyimpan leftCol dan rightCol untuk mesin rendering Canvas pratinjau & JPG
+   */
   fun twoColumnsOrWrapped(
     left: String,
     right: String,
@@ -398,12 +407,20 @@ object ReceiptFormatter {
     val totalLen = left.length + right.length
     if (totalLen + 1 <= width) {
       val spaces = " ".repeat(width - totalLen)
-      return listOf(FormattedLine(text = "$left$spaces$right", isBold = isBold, isDoubleHeight = isDoubleHeight))
+      return listOf(
+        FormattedLine(
+          text = "$left$spaces$right",
+          isBold = isBold,
+          isDoubleHeight = isDoubleHeight,
+          leftCol = left,
+          rightCol = right
+        )
+      )
     }
 
-    // Jika melebihi lebar kolom: bungkus rapi dengan mempertahankan label di kiri
     val lines = mutableListOf<FormattedLine>()
     val maxLabelWidth = if (width == 48) 20 else 13
+    val maxValueWidth = width - maxLabelWidth - 1
 
     if (left.length <= maxLabelWidth) {
       val availRight = width - left.length - 1
@@ -411,26 +428,51 @@ object ReceiptFormatter {
       if (rightWrapped.isNotEmpty()) {
         val firstR = rightWrapped[0]
         val sp1 = " ".repeat((width - left.length - firstR.length).coerceAtLeast(1))
-        lines.add(FormattedLine(text = "$left$sp1$firstR", isBold = isBold, isDoubleHeight = isDoubleHeight))
+        lines.add(
+          FormattedLine(
+            text = "$left$sp1$firstR",
+            isBold = isBold,
+            isDoubleHeight = isDoubleHeight,
+            leftCol = left,
+            rightCol = firstR
+          )
+        )
         val indent = " ".repeat(width - availRight)
         for (i in 1 until rightWrapped.size) {
           val subR = rightWrapped[i]
           val spSub = " ".repeat((width - indent.length - subR.length).coerceAtLeast(0))
-          lines.add(FormattedLine(text = "$indent$spSub$subR", isBold = isBold, isDoubleHeight = isDoubleHeight))
+          lines.add(
+            FormattedLine(
+              text = "$indent$spSub$subR",
+              isBold = isBold,
+              isDoubleHeight = isDoubleHeight,
+              leftCol = "",
+              rightCol = subR
+            )
+          )
         }
         return lines
       }
     }
 
-    // Jika label sendiri panjang:
-    val wrappedLeft = wrapText(left, width)
-    for (wl in wrappedLeft) {
-      lines.add(FormattedLine(text = wl, isBold = isBold))
-    }
-    val wrappedRight = wrapText(right, width)
-    for (wr in wrappedRight) {
-      val spaces = " ".repeat((width - wr.length).coerceAtLeast(0))
-      lines.add(FormattedLine(text = "$spaces$wr", isBold = isBold, isDoubleHeight = isDoubleHeight))
+    // Jika label sendiri panjang: bungkus kedua kolom dalam tabel dua kolom yang konsisten
+    val leftWrapped = wrapText(left, maxLabelWidth)
+    val rightWrapped = wrapText(right, maxValueWidth)
+    val maxLines = maxOf(leftWrapped.size, rightWrapped.size)
+
+    for (i in 0 until maxLines) {
+      val l = leftWrapped.getOrNull(i) ?: ""
+      val r = rightWrapped.getOrNull(i) ?: ""
+      val lineText = twoColumns(l, r, width)
+      lines.add(
+        FormattedLine(
+          text = lineText,
+          isBold = isBold,
+          isDoubleHeight = isDoubleHeight,
+          leftCol = l,
+          rightCol = r
+        )
+      )
     }
     return lines
   }
