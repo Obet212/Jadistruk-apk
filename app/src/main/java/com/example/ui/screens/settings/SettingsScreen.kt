@@ -546,9 +546,9 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
                       text = when (theme) {
+                        ReceiptTheme.PROFESIONAL -> "Standard"
                         ReceiptTheme.SEDERHANA -> "Minimalis"
-                        ReceiptTheme.PROFESIONAL -> "Resmi Bank"
-                        ReceiptTheme.MODERN -> "Kekinian"
+                        ReceiptTheme.MODERN -> "Modern"
                       },
                       style = MaterialTheme.typography.labelSmall,
                       color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant

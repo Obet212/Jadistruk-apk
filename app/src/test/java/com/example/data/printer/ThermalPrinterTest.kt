@@ -34,18 +34,15 @@ class ThermalPrinterTest {
     val text = ReceiptFormatter.formatText(receipt, settings)
 
     assertTrue(text.contains("TOKO JAYA"))
-    assertTrue(text.contains("STRUK BUKTI PENERIMA"))
-    // Label "Waktu Transaksi" diubah menjadi "Transaksi"
-    assertTrue(text.contains("Transaksi"))
-    // Bagian teks "Status Transaksi Sukses" telah dihapus
-    assertTrue(!text.contains("Status Transaksi"))
-    assertTrue(!text.contains("TRANSAKSI BERHASIL"))
+    assertTrue(text.contains("KODE REFERENSI"))
+    assertTrue(text.contains("DATA PENERIMA"))
     assertTrue(text.contains("BCA"))
     assertTrue(text.contains("BUDI SANTOSO"))
-    assertTrue(text.contains("Rp 500.000"))
-    assertTrue(text.contains("Rp 2.500"))
-    assertTrue(text.contains("Rp 502.500"))
+    assertTrue(text.contains("RP 500.000"))
+    assertTrue(text.contains("RP 2.500"))
+    assertTrue(text.contains("RP 502.500"))
     assertTrue(text.contains("REF998877"))
+    assertTrue(text.contains("** TRANSAKSI BERHASIL **"))
   }
 
   @Test
@@ -66,7 +63,7 @@ class ThermalPrinterTest {
     // 80mm divider should be 48 chars
     assertTrue(text.contains("=".repeat(48)))
     assertTrue(text.contains("SITI RAHMAH"))
-    assertTrue(text.contains("Rp 1.253.000"))
+    assertTrue(text.contains("RP 1.253.000"))
   }
 
   @Test
@@ -142,14 +139,14 @@ class ThermalPrinterTest {
     val text = ReceiptFormatter.formatText(receipt, settings)
 
     assertTrue(text.contains("KASIR KITA"))
-    // Alamat toko tampil tepat di bawah nama toko
-    assertTrue(text.contains("Jl. Melati No. 12"))
-    assertTrue(text.contains("BUKTI TRANSFER"))
-    assertTrue(text.contains("BRI"))
+    assertTrue(text.contains("PENERIMA:"))
     assertTrue(text.contains("AHMAD FAUZI"))
-    assertTrue(text.contains("Rp 250.000"))
-    assertTrue(text.contains("Rp 2.500"))
-    assertTrue(text.contains("Rp 252.500"))
+    assertTrue(text.contains("BRI 0987654321"))
+    assertTrue(text.contains("NOMINAL"))
+    assertTrue(text.contains("RP 250.000"))
+    assertTrue(text.contains("RP 2.500"))
+    assertTrue(text.contains("RP 252.500"))
+    assertTrue(text.contains("** TRANSAKSI BERHASIL **"))
   }
 
   @Test
@@ -170,22 +167,15 @@ class ThermalPrinterTest {
     )
     val text = ReceiptFormatter.formatText(receipt, settings)
 
-    // Tanpa simbol dekoratif bintang, panah, atau pagar
     assertTrue(text.contains("DIGITAL MART"))
-    assertTrue(text.contains("BUKTI TRANSFER DIGITAL"))
-    assertTrue(text.contains("INFORMASI PENERIMA"))
-    assertTrue(text.contains("RINCIAN BIAYA"))
-    assertTrue(!text.contains("★"))
-    assertTrue(!text.contains(">>>"))
-    assertTrue(!text.contains("##"))
-    // Powered by JADISTRUK telah dihapus
-    assertTrue(!text.contains("Powered by JADISTRUK"))
-    assertTrue(text.contains("DANA"))
+    assertTrue(text.contains("BUKTI TRANSFER"))
+    assertTrue(text.contains("KEPADA:"))
     assertTrue(text.contains("DEWI LESTARI"))
-    assertTrue(text.contains("Rp 750.000"))
-    assertTrue(text.contains("Rp 2.000"))
+    assertTrue(text.contains("DANA"))
+    assertTrue(text.contains("081299887766"))
     assertTrue(text.contains("TOTAL BAYAR"))
-    assertTrue(text.contains("Rp 752.000"))
+    assertTrue(text.contains("RP 752.000"))
+    assertTrue(text.contains("** TRANSAKSI BERHASIL **"))
   }
 
   @Test
@@ -289,10 +279,17 @@ class ThermalPrinterTest {
       val twoColLines = lines.filter { it.leftCol != null || it.rightCol != null }
       assertTrue("Theme $theme should have structured two-column lines", twoColLines.isNotEmpty())
 
-      // Verifikasi bahwa baris nilai terpenting (Total, Jumlah/Nominal) memiliki kolom terstruktur
-      val totalLine = twoColLines.firstOrNull { it.leftCol?.contains("TOTAL", ignoreCase = true) == true }
-      assertNotNull("Theme $theme must have two-column TOTAL row", totalLine)
-      assertTrue(totalLine?.rightCol?.contains("502.500") == true)
+      if (theme != com.example.data.model.ReceiptTheme.MODERN) {
+        val totalLine = twoColLines.firstOrNull { it.leftCol?.contains("TOTAL", ignoreCase = true) == true }
+        assertNotNull("Theme $theme must have two-column TOTAL row", totalLine)
+        assertTrue(totalLine?.rightCol?.contains("502.500") == true)
+      } else {
+        // Modern theme has centered TOTAL BAYAR amount and two-column recipient/time details
+        val penerimaLine = twoColLines.firstOrNull { it.leftCol?.contains("PENERIMA", ignoreCase = true) == true }
+        assertNotNull("Theme Modern must have two-column PENERIMA row", penerimaLine)
+        assertTrue(lines.any { it.text.contains("TOTAL BAYAR") })
+        assertTrue(lines.any { it.text.contains("502.500") })
+      }
     }
   }
 }

@@ -10,28 +10,34 @@ enum class ReceiptTheme(
   val tagLine: String,
   val description: String
 ) {
-  SEDERHANA(
-    id = "sederhana",
-    displayName = "Sederhana",
-    tagLine = "Minimalis & Ringkas",
-    description = "Tata letak ringkas, hemat kertas, garis putus-putus klasik, cepat dibaca"
-  ),
   PROFESIONAL(
     id = "profesional",
-    displayName = "Profesional",
-    tagLine = "Format Resmi Perbankan",
-    description = "Standar resmi bukti transfer bank dengan garis ganda tegas dan status validasi"
+    displayName = "1. Standard",
+    tagLine = "Format Standard",
+    description = "Format standard lengkap dengan kode referensi dan data penerima terpisah"
+  ),
+  SEDERHANA(
+    id = "sederhana",
+    displayName = "2. Minimalis",
+    tagLine = "Format Minimalis",
+    description = "Tata letak ringkas tanpa sekat garis, waktu terpusat, dan data penerima langsung"
   ),
   MODERN(
     id = "modern",
-    displayName = "Modern",
-    tagLine = "Fintech & Retail Kekinian",
-    description = "Desain visual modern, hierarki blok terstruktur, dan aksen dekoratif elegan"
+    displayName = "3. Modern",
+    tagLine = "Format Modern",
+    description = "Header bukti transfer tegas, blok kepada, dan nominal total bayar besar terpusat"
   );
 
   companion object {
     fun fromId(id: String?): ReceiptTheme {
-      return entries.find { it.id.equals(id, ignoreCase = true) } ?: PROFESIONAL
+      if (id == null) return PROFESIONAL
+      return when (id.lowercase()) {
+        "standard", "standar", "profesional" -> PROFESIONAL
+        "minimalis", "sederhana" -> SEDERHANA
+        "modern" -> MODERN
+        else -> entries.find { it.id.equals(id, ignoreCase = true) } ?: PROFESIONAL
+      }
     }
   }
 }

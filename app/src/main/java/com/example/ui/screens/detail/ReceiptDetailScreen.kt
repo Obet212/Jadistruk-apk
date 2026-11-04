@@ -417,14 +417,14 @@ fun ReceiptDetailScreen(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // 3 Tombol Pilihan Tema
+            // 3 Tombol Pilihan Tema (1. Standard, 2. Minimalis, 3. Modern)
             Row(
               modifier = Modifier.fillMaxWidth(),
               horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
               ReceiptTheme.entries.forEach { theme ->
                 val isSelected = selectedTheme == theme
-                Card(
+                Surface(
                   modifier = Modifier
                     .weight(1f)
                     .clickable {
@@ -433,51 +433,38 @@ fun ReceiptDetailScreen(
                       onSaveSettings(updated)
                     }
                     .testTag("theme_chip_${theme.id}"),
-                  shape = RoundedCornerShape(10.dp),
-                  colors = CardDefaults.cardColors(
-                    containerColor = if (isSelected) {
-                      MaterialTheme.colorScheme.primaryContainer
-                    } else {
-                      MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-                    }
-                  ),
+                  shape = RoundedCornerShape(20.dp),
+                  color = if (isSelected) {
+                    MaterialTheme.colorScheme.primary
+                  } else {
+                    MaterialTheme.colorScheme.surface
+                  },
                   border = BorderStroke(
-                    width = if (isSelected) 1.5.dp else 1.dp,
+                    width = 1.dp,
                     color = if (isSelected) {
                       MaterialTheme.colorScheme.primary
                     } else {
                       MaterialTheme.colorScheme.outlineVariant
                     }
-                  )
+                  ),
+                  shadowElevation = if (isSelected) 2.dp else 0.dp
                 ) {
-                  Column(
+                  Box(
                     modifier = Modifier
                       .fillMaxWidth()
-                      .padding(vertical = 10.dp, horizontal = 6.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                      .padding(vertical = 10.dp, horizontal = 4.dp),
+                    contentAlignment = Alignment.Center
                   ) {
                     Text(
                       text = theme.displayName,
                       style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                       color = if (isSelected) {
-                        MaterialTheme.colorScheme.onPrimaryContainer
+                        MaterialTheme.colorScheme.onPrimary
                       } else {
                         MaterialTheme.colorScheme.onSurface
-                      }
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                      text = when (theme) {
-                        ReceiptTheme.SEDERHANA -> "Minimalis"
-                        ReceiptTheme.PROFESIONAL -> "Resmi Bank"
-                        ReceiptTheme.MODERN -> "Kekinian"
                       },
-                      style = MaterialTheme.typography.labelSmall,
-                      color = if (isSelected) {
-                        MaterialTheme.colorScheme.primary
-                      } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                      }
+                      maxLines = 1,
+                      softWrap = false
                     )
                   }
                 }
