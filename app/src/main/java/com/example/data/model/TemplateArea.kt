@@ -15,9 +15,11 @@ import java.util.UUID
  * 7. TOTAL (otomatis: NOMINAL + ADMIN)
  */
 enum class TargetRecipientField(val fieldName: String, val description: String) {
-  WAKTU("WAKTU", "Tanggal dan jam transaksi transfer"),
+  TANGGAL("TANGGAL", "Tanggal transaksi transfer (DD/MM/YYYY)"),
+  WAKTU("WAKTU", "Waktu atau jam transaksi transfer (HH:MM:SS)"),
+  REFERENSI("REFERENSI", "Nomor referensi / SN / kode transaksi"),
   BANK("BANK", "Nama bank atau dompet digital tujuan penerima"),
-  REKENING("REKENING", "Nomor rekening atau nomor HP penerima"),
+  REKENING("REKENING", "Nomor rekening atau nomor HP penerima (maks 15 digit)"),
   PENERIMA("PENERIMA", "Nama lengkap penerima transfer"),
   NOMINAL("NOMINAL", "Jumlah uang transfer diterima"),
   ADMIN("ADMIN", "Biaya admin transfer (diisi manual)"),

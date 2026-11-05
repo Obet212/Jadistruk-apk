@@ -15,103 +15,9 @@ data class FieldValidationReport(
 
 object FieldValidator {
 
-  // 1. BANK Normalization
-  fun sanitizeBank(raw: String): Pair<String, String?> {
-    val trimmed = raw.trim()
-    if (trimmed.isBlank()) {
-      return Pair("", "Bank tujuan belum terdeteksi")
-    }
-    val match = BankRegistry.matchBank(trimmed)
-    return if (match.isConfident) {
-      Pair(match.officialName, null)
-    } else {
-      Pair("", "Nama bank tidak cocok dengan kamus resmi atau alias terdaftar.")
-    }
-  }
-
-  // 2. REKENING Normalization (Strict 10 to 15 digits)
-  fun sanitizeAccount(raw: String): Pair<String, String?> {
-    if (raw.isBlank()) {
-      return Pair("", "Nomor rekening belum terisi")
-    }
-
-    // Reject if string represents currency or amount
-    if (raw.contains("Rp", ignoreCase = true) || raw.contains("IDR", ignoreCase = true)) {
-      return Pair("", "Nilai berupa nominal, bukan nomor rekening.")
-    }
-
-    // Strip labels like "Nomor Rekening :", "No. Rek :", "No. HP :", "Ke Rek :", "DANA ID :"
-    val cleaned = raw.replace(
-      Regex("(?i)^(nomor\\s*rekening|no\\.?\\s*rekening|rekening\\s*tujuan|no\\.?\\s*rek|nomor\\s*hp|no\\.?\\s*hp|nomor\\s*ponsel|dana\\s*id|akun\\s*tujuan|ke\\s*rekening)[:\\-\\s]+"),
-      ""
-    ).trim()
-
-    // Filter only digits without converting to numeric type (preserves leading zeroes)
-    val digitsOnly = cleaned.filter { it.isDigit() }
-    val hasHyphen = cleaned.contains("-")
-    val finalAccount = if (hasHyphen) {
-      cleaned.replace(Regex("[^0-9\\-]"), "")
-    } else {
-      digitsOnly
-    }
-
-    return when {
-      digitsOnly.length in 10..15 -> Pair(finalAccount, null)
-      digitsOnly.length in 1..9 -> Pair("", "Nomor rekening terlalu pendek (${digitsOnly.length} digit, syarat 10–15 digit).")
-      digitsOnly.length > 15 -> Pair("", "Nomor rekening melebihi batas 15 digit (${digitsOnly.length} digit).")
-      else -> Pair("", "Nomor rekening tidak valid (tidak ada angka).")
-    }
-  }
-
-  // 3. PENERIMA Normalization
-  fun sanitizeRecipientName(raw: String): Pair<String, String?> {
-    val trimmed = raw.trim()
-    if (trimmed.isBlank()) {
-      return Pair("", "Nama penerima belum terdeteksi")
-    }
-
-    // Reject if line is marked as sender
-    val lower = trimmed.lowercase(Locale.ROOT)
-    if (lower.contains("pengirim") || lower.contains("sumber dana") || lower.contains("rekening asal")) {
-      return Pair("", "Teks merupakan data pengirim, bukan penerima.")
-    }
-
-    // Strictly strip labels from the same line if present
-    var cleaned = trimmed
-      .replace(Regex("(?i)^(nama\\s*penerima|nama\\s*tujuan|nama\\s*lengkap|penerima|tujuan\\s*transfer|ke\\s*nama|kirim\\s*ke|tujuan|ke)[:\\-\\s]+"), "")
-      .replace(Regex("(?i)\\b(transaksi\\s*berhasil|transfer\\s*berhasil|berhasil|sukses|status|detail\\s*transaksi)\\b"), "")
-      .replace(Regex("[^a-zA-Z0-9\\s.'\\-,&()/]"), "")
-      .replace(Regex("\\s+"), " ")
-      .trim()
-
-    // Must not be a bank name
-    if (BankRegistry.matchBank(cleaned).isConfident) {
-      return Pair("", "Teks cocok dengan nama bank, bukan nama penerima.")
-    }
-
-    // Check validity: must have at least 2 letters
-    val letterCount = cleaned.count { it.isLetter() }
-    return if (letterCount >= 2 && cleaned.length in 2..60) {
-      Pair(cleaned, null)
-    } else {
-      Pair("", "Nama penerima tidak valid atau belum terbaca.")
-    }
-  }
-
-  // 4. WAKTU Normalization with Range Validation (NO CURRENT TIME FALLBACK)
-  fun sanitizeDateTime(raw: String): Pair<String, String?> {
-    val trimmed = raw.trim()
-    if (trimmed.isBlank()) {
-      return Pair("", "Waktu transaksi belum terdeteksi")
-    }
-
-    val parsed = parseAndValidateDateTime(trimmed)
-    return if (parsed != null) {
-      Pair(parsed, null)
-    } else {
-      Pair("", "Format tanggal/waktu transaksi tidak valid.")
-    }
-  }
+  // =========================================================================
+  // 1. TANGGAL (Standard format: DD/MM/YYYY dengan validasi kalender akurat)
+  // =========================================================================
 
   private val MONTH_MAP = mapOf(
     "jan" to 1, "januari" to 1, "january" to 1,
@@ -128,22 +34,55 @@ object FieldValidator {
     "des" to 12, "desember" to 12, "dec" to 12, "december" to 12
   )
 
-  fun parseAndValidateDateTime(input: String): String? {
-    val clean = input.replace(Regex("(?i)^(tanggal|tgl|waktu|date|time|transaksi)[:\\-\\s]+"), "").trim()
+  fun isLeapYear(year: Int): Boolean {
+    return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)
+  }
 
-    // 1. dd/MM/yyyy or dd-MM-yyyy or dd.MM.yyyy with optional time
+  fun getDaysInMonth(month: Int, year: Int): Int {
+    return when (month) {
+      1, 3, 5, 7, 8, 10, 12 -> 31
+      4, 6, 9, 11 -> 30
+      2 -> if (isLeapYear(year)) 29 else 28
+      else -> 0
+    }
+  }
+
+  /**
+   * Validasi Tanggal Transaksi:
+   * - Format DD/MM/YYYY, DD-MM-YYYY, DD.MM.YYYY, YYYY-MM-DD, atau DD MMM YYYY.
+   * - Validasi kalender hari & bulan (kabisat dll).
+   * - Output standar: DD/MM/YYYY.
+   * - Menolak tanggal lahir atau tanggal kedaluwarsa.
+   */
+  fun sanitizeDate(raw: String): Pair<String, String?> {
+    val trimmed = raw.trim()
+    if (trimmed.isBlank()) {
+      return Pair("", "Tanggal transaksi belum terisi")
+    }
+
+    val lower = trimmed.lowercase(Locale.ROOT)
+    // Tolak tanggal lahir atau kedaluwarsa
+    if (lower.contains("lahir") || lower.contains("birth") ||
+        lower.contains("exp") || lower.contains("berlaku") ||
+        lower.contains("kadaluwarsa") || lower.contains("valid thru")) {
+      return Pair("", "Teks merupakan tanggal lahir/kedaluwarsa, bukan tanggal transaksi.")
+    }
+
+    val clean = trimmed.replace(
+      Regex("(?i)^(tanggal\\s*transaksi|transaction\\s*date|tgl\\s*transaksi|tanggal|tgl|date)[:\\-\\s]+"),
+      ""
+    ).trim()
+
+    // 1. dd MMM yyyy (e.g. 28 Okt 2026 atau 28-Okt-2026)
+    val textDateRegex = Regex("(?i)\\b(\\d{1,2})[\\s\\-\\./]+([A-Za-z]{3,12})[\\s\\-\\./]+(\\d{4})\\b")
+    // 2. dd/MM/yyyy atau dd-MM-yyyy atau dd.MM.yyyy
     val numDateRegex = Regex("(?i)\\b(\\d{1,2})[/\\-\\.](\\d{1,2})[/\\-\\.](\\d{2,4})\\b")
-    // 2. yyyy-MM-dd
+    // 3. yyyy-MM-dd atau yyyy/MM/dd
     val isoDateRegex = Regex("(?i)\\b(\\d{4})[/\\-](\\d{1,2})[/\\-](\\d{1,2})\\b")
-    // 3. dd MMM yyyy (e.g. 18 Okt 2026 or 18 October 2026)
-    val textDateRegex = Regex("(?i)\\b(\\d{1,2})\\s+([A-Za-z]{3,12})\\s+(\\d{4})\\b")
-    // Time regex: HH:mm or HH:mm:ss
-    val timeRegex = Regex("\\b(\\d{1,2}):(\\d{2})(?::(\\d{2}))?\\b")
 
     var day: Int? = null
     var month: Int? = null
     var year: Int? = null
-    var matchedDateStr: String? = null
 
     val textMatch = textDateRegex.find(clean)
     if (textMatch != null) {
@@ -153,7 +92,6 @@ object FieldValidator {
         day = dStr.toIntOrNull()
         month = mVal
         year = yStr.toIntOrNull()
-        matchedDateStr = "$dStr $mStr $yStr"
       }
     }
 
@@ -163,13 +101,9 @@ object FieldValidator {
         val (dStr, mStr, yStr) = numMatch.destructured
         var yVal = yStr.toIntOrNull() ?: 0
         if (yVal in 0..99) yVal += 2000
-        val dVal = dStr.toIntOrNull() ?: 0
-        val mVal = mStr.toIntOrNull() ?: 0
-
-        day = dVal
-        month = mVal
+        day = dStr.toIntOrNull()
+        month = mStr.toIntOrNull()
         year = yVal
-        matchedDateStr = "${dStr.padStart(2, '0')}/${mStr.padStart(2, '0')}/$year"
       }
     }
 
@@ -180,73 +114,307 @@ object FieldValidator {
         day = dStr.toIntOrNull()
         month = mStr.toIntOrNull()
         year = yStr.toIntOrNull()
-        if (day != null && month != null && year != null) {
-          matchedDateStr = "${dStr.padStart(2, '0')}/${mStr.padStart(2, '0')}/$year"
-        }
       }
     }
 
-    // Validate date components
-    if (day == null || month == null || year == null) return null
-    if (day !in 1..31 || month !in 1..12 || year !in 2015..2035) return null
+    if (day == null || month == null || year == null) {
+      return Pair("", "Format tanggal tidak dikenali.")
+    }
 
-    // Look for time
-    val timeMatch = timeRegex.find(clean)
-    return if (timeMatch != null) {
-      val (hStr, minStr, secStr) = timeMatch.destructured
-      val hour = hStr.toIntOrNull() ?: -1
-      val minute = minStr.toIntOrNull() ?: -1
-      val second = if (secStr.isNotEmpty()) secStr.toIntOrNull() ?: 0 else 0
+    if (year !in 2018..2035) {
+      return Pair("", "Tahun transaksi di luar batas wajar (2018–2035): $year")
+    }
 
-      if (hour in 0..23 && minute in 0..59 && second in 0..59) {
-        val formattedTime = if (secStr.isNotEmpty()) {
-          "${hStr.padStart(2, '0')}:${minStr.padStart(2, '0')}:${secStr.padStart(2, '0')}"
-        } else {
-          "${hStr.padStart(2, '0')}:${minStr.padStart(2, '0')}"
-        }
-        "$matchedDateStr $formattedTime"
-      } else {
-        null
-      }
+    if (month !in 1..12) {
+      return Pair("", "Bulan tidak valid (harus 1–12): $month")
+    }
+
+    val maxDays = getDaysInMonth(month, year)
+    if (day !in 1..maxDays) {
+      return Pair("", "Tanggal tidak valid untuk kalender ($day melebihi batas $maxDays hari di bulan $month).")
+    }
+
+    val formatted = "${day.toString().padStart(2, '0')}/${month.toString().padStart(2, '0')}/$year"
+    return Pair(formatted, null)
+  }
+
+  // =========================================================================
+  // 2. WAKTU (Format 24 jam HH:MM:SS atau HH:MM)
+  // =========================================================================
+
+  /**
+   * Validasi Waktu Transaksi:
+   * - Format 24 jam HH:MM:SS atau HH:MM.
+   * - Validasi jam 00–23, menit 00–59, detik 00–59.
+   * - Menolak waktu status bar atau angka yang bukan waktu transaksi.
+   */
+  fun sanitizeTime(raw: String): Pair<String, String?> {
+    val trimmed = raw.trim()
+    if (trimmed.isBlank()) {
+      return Pair("", "Waktu transaksi belum terisi")
+    }
+
+    val clean = trimmed.replace(
+      Regex("(?i)^(waktu\\s*transaksi|jam\\s*transaksi|transaction\\s*time|waktu|jam|time|pukul)[:\\-\\s]+"),
+      ""
+    ).replace(Regex("(?i)\\b(wib|wita|wit)\\b"), "").trim()
+
+    val timeRegex = Regex("\\b(\\d{1,2}):(\\d{2})(?::(\\d{2}))?\\b")
+    val match = timeRegex.find(clean) ?: return Pair("", "Format jam tidak valid (contoh: 15:33 atau 15:33:00).")
+
+    val (hStr, mStr, sStr) = match.destructured
+    val hour = hStr.toIntOrNull() ?: -1
+    val minute = mStr.toIntOrNull() ?: -1
+    val second = if (sStr.isNotEmpty()) sStr.toIntOrNull() ?: -1 else null
+
+    if (hour !in 0..23) {
+      return Pair("", "Jam di luar batas format 24 jam (harus 00–23): $hour")
+    }
+    if (minute !in 0..59) {
+      return Pair("", "Menit di luar batas valid (harus 00–59): $minute")
+    }
+    if (second != null && second !in 0..59) {
+      return Pair("", "Detik di luar batas valid (harus 00–59): $second")
+    }
+
+    val formatted = if (second != null) {
+      "${hStr.padStart(2, '0')}:${mStr.padStart(2, '0')}:${sStr.padStart(2, '0')}"
     } else {
-      matchedDateStr
+      "${hStr.padStart(2, '0')}:${mStr.padStart(2, '0')}"
+    }
+    return Pair(formatted, null)
+  }
+
+  /**
+   * Menggabungkan atau memisahkan sanitasi Tanggal & Waktu (kompatibilitas menyeluruh)
+   */
+  fun sanitizeDateTime(raw: String): Pair<String, String?> {
+    val trimmed = raw.trim()
+    if (trimmed.isBlank()) return Pair("", "Waktu transaksi belum terdeteksi")
+
+    val (dateStr, dateIssue) = sanitizeDate(trimmed)
+    val (timeStr, _) = sanitizeTime(trimmed)
+
+    return when {
+      dateStr.isNotBlank() && timeStr.isNotBlank() -> Pair("$dateStr $timeStr", null)
+      dateStr.isNotBlank() -> Pair(dateStr, null)
+      timeStr.isNotBlank() -> Pair(timeStr, null)
+      else -> Pair("", dateIssue ?: "Format tanggal/waktu transaksi tidak valid.")
     }
   }
 
-  // 5. NOMINAL Normalization (Smart Rupiah identification)
+  // =========================================================================
+  // 3. REFERENSI (Serial Number / Kode Transaksi, prioritas > 15 digit)
+  // =========================================================================
+
+  /**
+   * Validasi Nomor Referensi / SN / Kode Transaksi:
+   * - Mempertahankan seluruh digit dan karakter asli, termasuk nol di depan.
+   * - Memprioritaskan kode transaksi > 15 digit.
+   * - Menolak nomor rekening, nomor telepon, atau angka nominal.
+   */
+  fun sanitizeRefNumber(raw: String, candidateAccount: String = ""): Pair<String, String?> {
+    val trimmed = raw.trim()
+    if (trimmed.isBlank()) {
+      return Pair("", "Nomor referensi belum terisi")
+    }
+
+    // Bersihkan prefix label referensi
+    val cleaned = trimmed.replace(
+      Regex("(?i)^(nomor\\s*referensi|no\\.?\\s*referensi|kode\\s*transaksi|transaction\\s*id|id\\s*transaksi|serial\\s*number|reference|no\\.?\\s*transaksi|no\\.?\\s*ref|reff?|sn)[:\\-\\s]+"),
+      ""
+    ).trim()
+
+    // Ambil karakter alfanumerik yang membentuk kode referensi
+    val refCode = cleaned.filter { it.isLetterOrDigit() || it == '-' || it == '_' }
+
+    if (refCode.isBlank()) {
+      return Pair("", "Kode referensi tidak terbaca.")
+    }
+
+    // Jangan mengambil nomor rekening sebagai referensi
+    val cleanAcc = candidateAccount.filter { it.isDigit() }
+    if (cleanAcc.isNotBlank() && refCode == cleanAcc) {
+      return Pair("", "Nilai sama persis dengan nomor rekening.")
+    }
+
+    // Jangan mengambil mata uang / nominal sebagai referensi
+    if (trimmed.contains("Rp", ignoreCase = true) || trimmed.contains("IDR", ignoreCase = true)) {
+      return Pair("", "Nilai berupa nominal, bukan nomor referensi.")
+    }
+
+    if (refCode.length < 6) {
+      return Pair("", "Kode referensi terlalu pendek (minimal 6 karakter).")
+    }
+
+    return Pair(refCode, null)
+  }
+
+  // =========================================================================
+  // 4. BANK TUJUAN (Penerima, menolak bank pengirim)
+  // =========================================================================
+
+  /**
+   * Validasi Bank Penerima:
+   * - Menolak nama bank pengirim / sumber dana.
+   * - Menggunakan kamus resmi BankRegistry.
+   * - Jika tidak dapat dipastikan, biarkan kosong.
+   */
+  fun sanitizeBank(raw: String): Pair<String, String?> {
+    val trimmed = raw.trim()
+    if (trimmed.isBlank()) {
+      return Pair("", "Bank tujuan belum terdeteksi")
+    }
+
+    val lower = trimmed.lowercase(Locale.ROOT)
+    if (lower.contains("pengirim") || lower.contains("sumber dana") || lower.contains("rekening asal") || lower.contains("dari bank")) {
+      return Pair("", "Teks merupakan data bank pengirim, bukan bank tujuan.")
+    }
+
+    val cleaned = trimmed.replace(
+      Regex("(?i)^(bank\\s*tujuan|bank\\s*penerima|tujuan\\s*transfer|ke\\s*bank|nama\\s*bank|bank)[:\\-\\s]+"),
+      ""
+    ).trim()
+
+    val match = BankRegistry.matchBank(cleaned)
+    return if (match.isConfident) {
+      Pair(match.officialName, null)
+    } else {
+      Pair("", "Nama bank tidak cocok dengan kamus resmi atau alias terdaftar.")
+    }
+  }
+
+  // =========================================================================
+  // 5. NOMOR REKENING (Maksimal 15 digit, pertahankan nol di depan)
+  // =========================================================================
+
+  /**
+   * Validasi Nomor Rekening:
+   * - Hanya boleh berisi angka 0–9.
+   * - Maksimal 15 digit (syarat standar perbankan).
+   * - Pertahankan angka nol di depan.
+   * - Jika > 15 digit: JANGAN otomatis dipotong, tandai tidak valid agar dicek manual.
+   * - Menolak nomor referensi, telepon, atau nominal.
+   */
+  fun sanitizeAccount(raw: String, candidateRef: String = ""): Pair<String, String?> {
+    val trimmed = raw.trim()
+    if (trimmed.isBlank()) {
+      return Pair("", "Nomor rekening belum terisi")
+    }
+
+    // Menolak jika berupa nominal atau mata uang
+    if (trimmed.contains("Rp", ignoreCase = true) || trimmed.contains("IDR", ignoreCase = true)) {
+      return Pair("", "Nilai berupa nominal, bukan nomor rekening.")
+    }
+
+    // Bersihkan label nomor rekening
+    val cleaned = trimmed.replace(
+      Regex("(?i)^(nomor\\s*rekening|no\\.?\\s*rekening|rekening\\s*tujuan|rekening\\s*penerima|no\\.?\\s*rek|account\\s*number|account|akun\\s*tujuan|ke\\s*rekening)[:\\-\\s]+"),
+      ""
+    ).trim()
+
+    // Pertahankan digit angka asli tanpa konversi tipe data numerik
+    val digitsOnly = cleaned.filter { it.isDigit() }
+
+    // Jangan mengambil nomor referensi sebagai rekening
+    if (candidateRef.isNotBlank() && digitsOnly == candidateRef) {
+      return Pair("", "Nilai tertukar dengan kode referensi transaksi.")
+    }
+
+    return when {
+      digitsOnly.length > 15 -> {
+        // ATURAN PENTING: Jangan otomatis memotong angka jika > 15 digit!
+        Pair("", "Nomor rekening melebihi batas 15 digit (${digitsOnly.length} digit). Periksa manual apakah tertukar dengan No. Referensi.")
+      }
+      digitsOnly.length in 10..15 -> Pair(digitsOnly, null)
+      digitsOnly.length in 1..9 -> Pair("", "Nomor rekening terlalu pendek (${digitsOnly.length} digit, syarat 10–15 digit).")
+      else -> Pair("", "Nomor rekening tidak valid (tidak ada angka).")
+    }
+  }
+
+  // =========================================================================
+  // 6. NAMA PENERIMA (Menolak pengirim, bank, dan label Kepada:)
+  // =========================================================================
+
+  /**
+   * Validasi Nama Penerima:
+   * - Hapus label seperti "Kepada:", "Penerima:", "Ke:".
+   * - Menolak nama pengirim / sumber dana.
+   * - Menolak nama bank atau merchant.
+   * - Jangan mengarang nama yang tidak terbaca.
+   */
+  fun sanitizeRecipientName(raw: String): Pair<String, String?> {
+    val trimmed = raw.trim()
+    if (trimmed.isBlank()) {
+      return Pair("", "Nama penerima belum terdeteksi")
+    }
+
+    val lower = trimmed.lowercase(Locale.ROOT)
+    if (lower.contains("pengirim") || lower.contains("sumber dana") || lower.contains("rekening asal") || lower.contains("dari rekening")) {
+      return Pair("", "Teks merupakan data pengirim, bukan nama penerima.")
+    }
+
+    var cleaned = trimmed
+      .replace(Regex("(?i)^(nama\\s*penerima|nama\\s*tujuan|nama\\s*lengkap|penerima\\s*transfer|penerima|beneficiary|recipient|tujuan|ke\\s*nama|kirim\\s*ke|kepada|ke)[:\\-\\s]+"), "")
+      .replace(Regex("(?i)\\b(transaksi\\s*berhasil|transfer\\s*berhasil|berhasil|sukses|status|detail\\s*transaksi)\\b"), "")
+      .replace(Regex("[^a-zA-Z0-9\\s.'\\-,&()/]"), "")
+      .replace(Regex("\\s+"), " ")
+      .trim()
+
+    // Tolak jika teks adalah nama bank
+    if (BankRegistry.matchBank(cleaned).isConfident) {
+      return Pair("", "Teks cocok dengan nama bank, bukan nama penerima.")
+    }
+
+    val letterCount = cleaned.count { it.isLetter() }
+    return if (letterCount >= 2 && cleaned.length in 2..60) {
+      Pair(cleaned, null)
+    } else {
+      Pair("", "Nama penerima tidak valid atau belum terbaca.")
+    }
+  }
+
+  // =========================================================================
+  // 7. NOMINAL TRANSFER (Jumlah uang diterima, menolak saldo & admin)
+  // =========================================================================
+
+  /**
+   * Validasi Nominal Transfer:
+   * - Format Rp 20.000, Rp20.000,00, IDR 20,000, 20000.
+   * - Simpan sebagai Long murni.
+   * - Menolak saldo atau biaya admin.
+   */
   fun parseNominal(raw: String): Pair<Long, String?> {
     if (raw.isBlank()) {
       return Pair(0L, "Nominal transfer wajib diisi")
     }
 
     val lower = raw.lowercase(Locale.ROOT)
-    // Discard if line explicitly belongs to ADMIN or SALDO
     if (lower.contains("biaya admin") || lower.contains("admin fee") ||
-        lower.contains("sisa saldo") || lower.contains("saldo awal")) {
-      return Pair(0L, "Teks bukan nominal transfer murni.")
+        lower.contains("sisa saldo") || lower.contains("saldo awal") || lower.contains("total saldo")) {
+      return Pair(0L, "Teks bukan nominal transfer murni (saldo / biaya admin).")
     }
 
     var s = raw.trim()
-    // Replace common OCR confusion: uppercase 'O'/'o' to '0', lowercase 'l' to '1'
+    // Perbaiki kesalahan OCR umum 'O'/'o' menjadi '0'
     s = s.replace('O', '0').replace('o', '0')
 
-    // Remove prefixes
-    s = s.replace(Regex("(?i)(nominal\\s*transfer|jumlah\\s*transfer|nominal|jumlah|amount|total\\s*diterima|rp\\.?|idr|[:=\\-])"), "").trim()
+    s = s.replace(
+      Regex("(?i)(nominal\\s*transfer|jumlah\\s*transfer|total\\s*transfer|nominal|jumlah|amount|total\\s*diterima|rp\\.?|idr|[:=\\-])"),
+      ""
+    ).trim()
 
-    // 1. Handle decimal cents at the end: e.g. ",00" or ".00"
+    // Hilangkan desimal sen di ujung (misal ,00 atau .00)
     if (s.endsWith(",00") || s.endsWith(".00")) {
       s = s.substring(0, s.length - 3).trim()
     }
 
-    // 2. Distinguish comma vs dot thousands separator:
-    // If format is like "150,000" or "1,500,000" where comma is followed by 3 digits
+    // Pisahkan ribuan dan desimal
     if (s.contains(",") && !s.contains(".")) {
       val parts = s.split(",")
-      // If all parts after first are exactly 3 digits, it's thousands separator
       if (parts.size > 1 && parts.drop(1).all { it.length == 3 && it.all { c -> c.isDigit() } }) {
         s = parts.joinToString("")
       } else if (parts.size == 2 && parts[1].length <= 2) {
-        // Cents, drop decimal
         s = parts[0]
       }
     } else if (s.contains(".") && !s.contains(",")) {
@@ -255,14 +423,11 @@ object FieldValidator {
         s = parts.joinToString("")
       }
     } else if (s.contains(".") && s.contains(",")) {
-      // e.g. "150.000,00" or "150,000.00"
       val lastDot = s.lastIndexOf('.')
       val lastComma = s.lastIndexOf(',')
       if (lastComma > lastDot) {
-        // Dot is thousand, comma is decimal: "150.000,50" -> "150000"
         s = s.substring(0, lastComma).filter { it.isDigit() }
       } else {
-        // Comma is thousand, dot is decimal: "150,000.50" -> "150000"
         s = s.substring(0, lastDot).filter { it.isDigit() }
       }
     }
@@ -277,36 +442,49 @@ object FieldValidator {
     }
   }
 
-  // 6. ADMIN Normalization
   fun parseAdmin(raw: String): Long {
     val clean = raw.filter { it.isDigit() }
     val value = clean.toLongOrNull() ?: 0L
     return maxOf(0L, value)
   }
 
-  // 7. TOTAL Calculation (Aritmetika Angka Rupiah)
   fun calculateTotal(nominal: Long, admin: Long): Long {
     return maxOf(0L, nominal + admin)
   }
 
-  /**
-   * Evaluates all 7 fields for print readiness.
-   * If crucial fields (Penerima, Bank, Nominal > 0) are missing or problematic,
-   * blocks printing until corrected.
-   */
+  // =========================================================================
+  // LAPORAN VALIDASI LENGKAP SEMUA 7 KOLOM
+  // =========================================================================
+
   fun validateReceipt(receipt: Receipt): FieldValidationReport {
     val errors = mutableMapOf<TargetRecipientField, String>()
     val warnings = mutableMapOf<TargetRecipientField, String>()
 
-    // 1. WAKTU
-    val (_, waktuIssue) = sanitizeDateTime(receipt.transactionDate)
-    if (receipt.transactionDate.isBlank()) {
-      warnings[TargetRecipientField.WAKTU] = "Tanggal/jam transaksi belum terisi."
-    } else if (waktuIssue != null) {
-      warnings[TargetRecipientField.WAKTU] = waktuIssue
+    // 1. TANGGAL
+    val (dateClean, dateIssue) = sanitizeDate(receipt.displayDate)
+    if (receipt.displayDate.isBlank()) {
+      warnings[TargetRecipientField.TANGGAL] = "Tanggal transaksi belum terdeteksi. Silakan periksa manual."
+    } else if (dateClean.isBlank() && dateIssue != null) {
+      warnings[TargetRecipientField.TANGGAL] = dateIssue
     }
 
-    // 2. BANK
+    // 2. WAKTU
+    val (timeClean, timeIssue) = sanitizeTime(receipt.displayTime)
+    if (receipt.displayTime.isBlank()) {
+      warnings[TargetRecipientField.WAKTU] = "Waktu transaksi belum terdeteksi. Silakan periksa manual."
+    } else if (timeClean.isBlank() && timeIssue != null) {
+      warnings[TargetRecipientField.WAKTU] = timeIssue
+    }
+
+    // 3. REFERENSI
+    val (refClean, refIssue) = sanitizeRefNumber(receipt.refNumber, receipt.recipientAccount)
+    if (receipt.refNumber.isBlank()) {
+      warnings[TargetRecipientField.REFERENSI] = "Nomor referensi / SN belum terdeteksi."
+    } else if (refClean.isBlank() && refIssue != null) {
+      warnings[TargetRecipientField.REFERENSI] = refIssue
+    }
+
+    // 4. BANK TUJUAN
     val (bankClean, bankIssue) = sanitizeBank(receipt.recipientBank)
     if (bankClean.isBlank()) {
       errors[TargetRecipientField.BANK] = "Bank tujuan penerima wajib diisi."
@@ -314,15 +492,15 @@ object FieldValidator {
       warnings[TargetRecipientField.BANK] = bankIssue
     }
 
-    // 3. REKENING
-    val (rekClean, rekIssue) = sanitizeAccount(receipt.recipientAccount)
-    if (rekClean.isBlank()) {
+    // 5. NOMOR REKENING
+    val (rekClean, rekIssue) = sanitizeAccount(receipt.recipientAccount, receipt.refNumber)
+    if (receipt.recipientAccount.isBlank()) {
       warnings[TargetRecipientField.REKENING] = "Nomor rekening penerima wajib 10–15 digit angka."
-    } else if (rekIssue != null) {
-      warnings[TargetRecipientField.REKENING] = rekIssue
+    } else if (rekClean.isBlank() && rekIssue != null) {
+      errors[TargetRecipientField.REKENING] = rekIssue
     }
 
-    // 4. PENERIMA
+    // 6. NAMA PENERIMA
     val (nameClean, nameIssue) = sanitizeRecipientName(receipt.recipientName)
     if (nameClean.isBlank()) {
       errors[TargetRecipientField.PENERIMA] = "Nama penerima transfer wajib diisi."
@@ -330,17 +508,17 @@ object FieldValidator {
       warnings[TargetRecipientField.PENERIMA] = nameIssue
     }
 
-    // 5. NOMINAL
+    // 7. NOMINAL
     if (receipt.amount <= 0L) {
       errors[TargetRecipientField.NOMINAL] = "Nominal transfer wajib bernilai lebih dari Rp0."
     }
 
-    // 6. ADMIN
+    // 8. BIAYA ADMIN
     if (receipt.adminFee < 0L) {
       errors[TargetRecipientField.ADMIN] = "Biaya admin tidak boleh bernilai negatif."
     }
 
-    // 7. TOTAL
+    // 9. TOTAL
     if (receipt.total <= 0L && receipt.amount > 0L) {
       errors[TargetRecipientField.TOTAL] = "Total transaksi tidak valid."
     }

@@ -65,7 +65,7 @@ object ReceiptFormatter {
   ): List<FormattedLine> {
     val list = mutableListOf<FormattedLine>()
     val dividerDash = "-".repeat(lineWidth)
-    val (datePart, timePart) = splitDateTime(receipt.transactionDate)
+    val (datePart, timePart) = splitDateTime(receipt.transactionDate, receipt.transactionTime)
 
     // 1. Nama Toko
     val storeName = settings.storeName.ifBlank { "TRFBT CELL" }
@@ -114,7 +114,7 @@ object ReceiptFormatter {
     val list = mutableListOf<FormattedLine>()
     val dividerDouble = "=".repeat(lineWidth)
     val dividerDash = "-".repeat(lineWidth)
-    val (datePart, timePart) = splitDateTime(receipt.transactionDate)
+    val (datePart, timePart) = splitDateTime(receipt.transactionDate, receipt.transactionTime)
 
     // 1. Nama Toko
     val storeName = settings.storeName.ifBlank { "TRFBT CELL" }
@@ -179,7 +179,7 @@ object ReceiptFormatter {
     val list = mutableListOf<FormattedLine>()
     val dividerDouble = "=".repeat(lineWidth)
     val dividerDash = "-".repeat(lineWidth)
-    val (datePart, timePart) = splitDateTime(receipt.transactionDate)
+    val (datePart, timePart) = splitDateTime(receipt.transactionDate, receipt.transactionTime)
 
     // 1. Nama Toko
     val storeName = settings.storeName.ifBlank { "TRFBT CELL" }
@@ -231,7 +231,11 @@ object ReceiptFormatter {
   // =========================================================================
   // HELPER FORMAT & FOOTER
   // =========================================================================
-  fun splitDateTime(rawDate: String): Pair<String, String> {
+  fun splitDateTime(rawDate: String, rawTime: String = ""): Pair<String, String> {
+    if (rawTime.isNotBlank()) {
+      val d = rawDate.trim().split(Regex("\\s+")).firstOrNull { it.contains("/") || it.contains("-") || it.contains(".") } ?: rawDate.trim().split(Regex("\\s+")).firstOrNull() ?: ""
+      return Pair(d.ifBlank { rawDate.trim() }, rawTime.trim())
+    }
     val trimmed = rawDate.trim()
     if (trimmed.isBlank()) return Pair("", "")
     val parts = trimmed.split(Regex("\\s+"))

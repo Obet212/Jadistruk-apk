@@ -38,6 +38,7 @@ import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.CropFree
@@ -124,6 +125,7 @@ fun ScanScreen(
   var showRawTextSheet by remember { mutableStateOf(false) }
   var showCoordinatesSheet by remember { mutableStateOf(false) }
   var isImageExpanded by remember { mutableStateOf(false) }
+  var showOriginalImageDialog by remember { mutableStateOf(false) }
   var showValidationDialog by remember { mutableStateOf(false) }
   var selectedTemplateId by remember { mutableStateOf<Long?>(null) }
 
@@ -439,26 +441,63 @@ fun ScanScreen(
               ) {
                 Column(modifier = Modifier.weight(1f)) {
                   Text(
-                    text = "7 Kolom Data Penerima",
+                    text = "7 Kolom Hasil Scan Bukti Transfer",
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.onSurface
                   )
                   Text(
-                    text = "Khusus data penerima transfer (Waktu, Bank, Rek, Nama, Nominal, Admin, Total)",
+                    text = "Tanggal, Waktu, Referensi, Bank, Rekening, Penerima, Nominal",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                   )
                 }
+              }
+
+              Spacer(modifier = Modifier.height(10.dp))
+
+              // Baris Tombol Aksi Cepat: Lihat Asli, Pindai Ulang, Teks Asli
+              Row(
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+              ) {
+                if (currentImageUri != null) {
+                  OutlinedButton(
+                    onClick = { showOriginalImageDialog = true },
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                    modifier = Modifier.testTag("btn_view_original_image")
+                  ) {
+                    Icon(Icons.Filled.Receipt, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Lihat Gambar Asli", style = MaterialTheme.typography.labelSmall)
+                  }
+                }
+
+                OutlinedButton(
+                  onClick = {
+                    photoPicker.launch(
+                      PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                    )
+                  },
+                  contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                  modifier = Modifier.testTag("btn_rescan_image")
+                ) {
+                  Icon(Icons.Filled.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
+                  Spacer(modifier = Modifier.width(6.dp))
+                  Text("Pindai Ulang", style = MaterialTheme.typography.labelSmall)
+                }
 
                 if (currentReceipt.rawOcrText.isNotBlank()) {
-                  Spacer(modifier = Modifier.width(8.dp))
                   TextButton(
                     onClick = { showRawTextSheet = true },
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
                     modifier = Modifier.testTag("btn_view_raw_ocr")
                   ) {
                     Icon(Icons.Filled.Info, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Teks Asli", style = MaterialTheme.typography.labelSmall)
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Teks Mentah OCR", style = MaterialTheme.typography.labelSmall)
                   }
                 }
               }
@@ -571,11 +610,14 @@ fun ScanScreen(
                             AssistChip(
                               onClick = {
                                 when (field) {
-                                  TargetRecipientField.WAKTU -> onUpdateReceipt(currentReceipt.copy(transactionDate = cand))
+                                  TargetRecipientField.TANGGAL -> onUpdateReceipt(currentReceipt.copy(transactionDate = cand))
+                                  TargetRecipientField.WAKTU -> onUpdateReceipt(currentReceipt.copy(transactionTime = cand))
+                                  TargetRecipientField.REFERENSI -> onUpdateReceipt(currentReceipt.copy(refNumber = cand))
                                   TargetRecipientField.BANK -> onUpdateReceipt(currentReceipt.copy(recipientBank = cand))
                                   TargetRecipientField.REKENING -> onUpdateReceipt(currentReceipt.copy(recipientAccount = cand))
                                   TargetRecipientField.PENERIMA -> onUpdateReceipt(currentReceipt.copy(recipientName = cand))
                                   TargetRecipientField.NOMINAL -> onUpdateReceipt(currentReceipt.copy(amount = cand.toLongOrNull() ?: currentReceipt.amount))
+                                  TargetRecipientField.ADMIN -> onUpdateReceipt(currentReceipt.copy(adminFee = cand.toLongOrNull() ?: currentReceipt.adminFee))
                                   else -> {}
                                 }
                               },
@@ -589,22 +631,37 @@ fun ScanScreen(
                 }
               }
 
-              Spacer(modifier = Modifier.height(6.dp))
+              Spacer(modifier = Modifier.height(10.dp))
 
-              // 1. WAKTU
-              val waktuWarning = validationReport.warnings[TargetRecipientField.WAKTU]
+              // 1. TANGGAL (DD/MM/YYYY)
+              val tanggalWarning = validationReport.warnings[TargetRecipientField.TANGGAL]
+              val tanggalError = validationReport.errors[TargetRecipientField.TANGGAL]
+              val (sanitizedDate, dateErr) = remember(currentReceipt.displayDate) {
+                FieldValidator.sanitizeDate(currentReceipt.displayDate)
+              }
+
               OutlinedTextField(
-                value = currentReceipt.transactionDate,
+                value = currentReceipt.displayDate,
                 onValueChange = { onUpdateReceipt(currentReceipt.copy(transactionDate = it)) },
-                label = { Text("1. WAKTU (Tanggal & Jam)") },
+                label = { Text("1. Tanggal Transaksi (DD/MM/YYYY)") },
+                isError = tanggalError != null,
                 supportingText = {
-                  if (waktuWarning != null) {
-                    Text(waktuWarning, color = MaterialTheme.colorScheme.tertiary)
-                  } else if (currentReceipt.transactionDate.isBlank()) {
-                    Text("Waktu transaksi belum terdeteksi. Silakan isi manual jika perlu.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                  if (tanggalError != null) {
+                    Text(tanggalError, color = MaterialTheme.colorScheme.error)
+                  } else if (tanggalWarning != null) {
+                    Text(tanggalWarning, color = MaterialTheme.colorScheme.tertiary)
+                  } else if (sanitizedDate.isNotBlank()) {
+                    Text("✓ Tanggal kalender valid: $sanitizedDate", color = MaterialTheme.colorScheme.primary)
+                  } else {
+                    Text("Format standar: DD/MM/YYYY (contoh: 28/10/2026)", color = MaterialTheme.colorScheme.onSurfaceVariant)
                   }
                 },
                 leadingIcon = { Icon(Icons.Filled.CalendarMonth, contentDescription = null) },
+                trailingIcon = {
+                  if (sanitizedDate.isNotBlank() && dateErr == null) {
+                    Icon(Icons.Filled.Done, contentDescription = "Valid", tint = MaterialTheme.colorScheme.primary)
+                  }
+                },
                 modifier = Modifier
                   .fillMaxWidth()
                   .testTag("input_transaction_date"),
@@ -614,7 +671,87 @@ fun ScanScreen(
 
               Spacer(modifier = Modifier.height(12.dp))
 
-              // 2. BANK
+              // 2. WAKTU (Format 24 Jam)
+              val waktuWarning = validationReport.warnings[TargetRecipientField.WAKTU]
+              val waktuError = validationReport.errors[TargetRecipientField.WAKTU]
+              val (sanitizedTime, timeErr) = remember(currentReceipt.displayTime) {
+                FieldValidator.sanitizeTime(currentReceipt.displayTime)
+              }
+
+              OutlinedTextField(
+                value = currentReceipt.displayTime,
+                onValueChange = { onUpdateReceipt(currentReceipt.copy(transactionTime = it)) },
+                label = { Text("2. Waktu Transaksi (24 Jam: HH:MM:SS)") },
+                isError = waktuError != null,
+                supportingText = {
+                  if (waktuError != null) {
+                    Text(waktuError, color = MaterialTheme.colorScheme.error)
+                  } else if (waktuWarning != null) {
+                    Text(waktuWarning, color = MaterialTheme.colorScheme.tertiary)
+                  } else if (sanitizedTime.isNotBlank()) {
+                    Text("✓ Waktu 24 jam valid: $sanitizedTime", color = MaterialTheme.colorScheme.primary)
+                  } else {
+                    Text("Format 24 jam: HH:MM:SS atau HH:MM (contoh: 15:33:00)", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                  }
+                },
+                leadingIcon = { Icon(Icons.Filled.CalendarMonth, contentDescription = null) },
+                trailingIcon = {
+                  if (sanitizedTime.isNotBlank() && timeErr == null) {
+                    Icon(Icons.Filled.Done, contentDescription = "Valid", tint = MaterialTheme.colorScheme.primary)
+                  }
+                },
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .testTag("input_transaction_time"),
+                singleLine = true,
+                shape = RoundedCornerShape(10.dp)
+              )
+
+              Spacer(modifier = Modifier.height(12.dp))
+
+              // 3. REFERENSI / SERIAL NUMBER / KODE TRANSAKSI
+              val refWarning = validationReport.warnings[TargetRecipientField.REFERENSI]
+              val refError = validationReport.errors[TargetRecipientField.REFERENSI]
+
+              OutlinedTextField(
+                value = currentReceipt.refNumber,
+                onValueChange = { onUpdateReceipt(currentReceipt.copy(refNumber = it)) },
+                label = { Text("3. Referensi / Serial Number / Kode Transaksi") },
+                isError = refError != null,
+                supportingText = {
+                  if (refError != null) {
+                    Text(refError, color = MaterialTheme.colorScheme.error)
+                  } else if (refWarning != null) {
+                    Text(refWarning, color = MaterialTheme.colorScheme.tertiary)
+                  } else if (currentReceipt.refNumber.isNotBlank()) {
+                    Text("✓ Kode referensi asli (${currentReceipt.refNumber.length} karakter, nol depan terjaga)", color = MaterialTheme.colorScheme.primary)
+                  } else {
+                    Text("Kode referensi / SN transaksi (prioritas > 15 digit)", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                  }
+                },
+                leadingIcon = { Icon(Icons.Filled.Tag, contentDescription = null) },
+                trailingIcon = {
+                  if (currentReceipt.refNumber.isNotBlank()) {
+                    IconButton(
+                      onClick = {
+                        clipboardManager.setText(AnnotatedString(currentReceipt.refNumber))
+                        Toast.makeText(context, "No. Referensi disalin ke papan klip", Toast.LENGTH_SHORT).show()
+                      }
+                    ) {
+                      Icon(Icons.Filled.ContentCopy, contentDescription = "Salin Referensi", modifier = Modifier.size(18.dp))
+                    }
+                  }
+                },
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .testTag("input_ref_number"),
+                singleLine = true,
+                shape = RoundedCornerShape(10.dp)
+              )
+
+              Spacer(modifier = Modifier.height(12.dp))
+
+              // 4. BANK TUJUAN
               val bankError = validationReport.errors[TargetRecipientField.BANK]
               val bankWarning = validationReport.warnings[TargetRecipientField.BANK]
               val bankMatch = remember(currentReceipt.recipientBank) {
@@ -625,7 +762,7 @@ fun ScanScreen(
                 OutlinedTextField(
                   value = currentReceipt.recipientBank,
                   onValueChange = { onUpdateReceipt(currentReceipt.copy(recipientBank = it)) },
-                  label = { Text("2. BANK (Tujuan Penerima)") },
+                  label = { Text("4. Bank Tujuan Penerima") },
                   isError = bankError != null,
                   supportingText = {
                     if (bankError != null) {
@@ -633,7 +770,9 @@ fun ScanScreen(
                     } else if (bankWarning != null) {
                       Text(bankWarning, color = MaterialTheme.colorScheme.tertiary)
                     } else if (bankMatch.isConfident) {
-                      Text("✓ Bank Resmi: ${bankMatch.officialName}", color = MaterialTheme.colorScheme.primary)
+                      Text("✓ Bank Resmi Terverifikasi: ${bankMatch.officialName}", color = MaterialTheme.colorScheme.primary)
+                    } else {
+                      Text("Nama bank atau dompet digital penerima transfer", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                   },
                   leadingIcon = { Icon(Icons.Filled.AccountBalance, contentDescription = null) },
@@ -649,7 +788,6 @@ fun ScanScreen(
                   shape = RoundedCornerShape(10.dp)
                 )
 
-                // Quick Popular Bank Chips
                 Spacer(modifier = Modifier.height(4.dp))
                 LazyRow(
                   horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -670,18 +808,41 @@ fun ScanScreen(
 
               Spacer(modifier = Modifier.height(12.dp))
 
-              // 3. REKENING
+              // 5. NOMOR REKENING (Maksimal 15 Digit)
+              val rekError = validationReport.errors[TargetRecipientField.REKENING]
               val rekWarning = validationReport.warnings[TargetRecipientField.REKENING]
+              val isTooLong = currentReceipt.recipientAccount.length > 15
+
               OutlinedTextField(
                 value = currentReceipt.recipientAccount,
-                onValueChange = { onUpdateReceipt(currentReceipt.copy(recipientAccount = it)) },
-                label = { Text("3. REKENING (No. Rek / HP Penerima)") },
+                onValueChange = { input ->
+                  val digits = input.filter { it.isDigit() }
+                  onUpdateReceipt(currentReceipt.copy(recipientAccount = digits))
+                },
+                label = { Text("5. Nomor Rekening (Maksimal 15 Digit)") },
+                isError = isTooLong || rekError != null,
                 supportingText = {
-                  if (rekWarning != null) {
+                  if (isTooLong) {
+                    Text(
+                      "⚠️ Nomor rekening melebihi batas 15 digit (${currentReceipt.recipientAccount.length} digit). Periksa apakah tertukar dengan No. Referensi.",
+                      color = MaterialTheme.colorScheme.error
+                    )
+                  } else if (rekError != null) {
+                    Text(rekError, color = MaterialTheme.colorScheme.error)
+                  } else if (rekWarning != null) {
                     Text(rekWarning, color = MaterialTheme.colorScheme.tertiary)
+                  } else if (currentReceipt.recipientAccount.isNotBlank()) {
+                    Text("✓ Nomor rekening valid (${currentReceipt.recipientAccount.length}/15 digit, nol depan terjaga)", color = MaterialTheme.colorScheme.primary)
+                  } else {
+                    Text("Hanya angka 0–9, maksimal 15 digit (tidak boleh dipotong otomatis jika melebihi)", color = MaterialTheme.colorScheme.onSurfaceVariant)
                   }
                 },
                 leadingIcon = { Icon(Icons.Filled.CreditCard, contentDescription = null) },
+                trailingIcon = {
+                  if (currentReceipt.recipientAccount.isNotBlank() && !isTooLong) {
+                    Icon(Icons.Filled.Done, contentDescription = "Valid", tint = MaterialTheme.colorScheme.primary)
+                  }
+                },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier
                   .fillMaxWidth()
@@ -692,22 +853,32 @@ fun ScanScreen(
 
               Spacer(modifier = Modifier.height(12.dp))
 
-              // 4. PENERIMA
+              // 6. NAMA PENERIMA
               val nameError = validationReport.errors[TargetRecipientField.PENERIMA]
               val nameWarning = validationReport.warnings[TargetRecipientField.PENERIMA]
+
               OutlinedTextField(
                 value = currentReceipt.recipientName,
                 onValueChange = { onUpdateReceipt(currentReceipt.copy(recipientName = it)) },
-                label = { Text("4. PENERIMA (Nama Lengkap)") },
+                label = { Text("6. Nama Penerima Transfer") },
                 isError = nameError != null,
                 supportingText = {
                   if (nameError != null) {
                     Text(nameError, color = MaterialTheme.colorScheme.error)
                   } else if (nameWarning != null) {
                     Text(nameWarning, color = MaterialTheme.colorScheme.tertiary)
+                  } else if (currentReceipt.recipientName.isNotBlank()) {
+                    Text("✓ Nama penerima terverifikasi (label & data pengirim dihapus)", color = MaterialTheme.colorScheme.primary)
+                  } else {
+                    Text("Nama lengkap penerima (label 'Kepada:' dibersihkan)", color = MaterialTheme.colorScheme.onSurfaceVariant)
                   }
                 },
                 leadingIcon = { Icon(Icons.Filled.Person, contentDescription = null) },
+                trailingIcon = {
+                  if (currentReceipt.recipientName.isNotBlank() && nameError == null) {
+                    Icon(Icons.Filled.Done, contentDescription = "Valid", tint = MaterialTheme.colorScheme.primary)
+                  }
+                },
                 modifier = Modifier
                   .fillMaxWidth()
                   .testTag("input_recipient_name"),
@@ -717,7 +888,7 @@ fun ScanScreen(
 
               Spacer(modifier = Modifier.height(12.dp))
 
-              // 5. NOMINAL
+              // 7. NOMINAL TRANSFER
               val nominalError = validationReport.errors[TargetRecipientField.NOMINAL]
               val matchingAdminRule = remember(currentReceipt.amount, printSettings.adminFeeRules) {
                 com.example.data.model.AdminFeeRule.findMatchingRule(currentReceipt.amount, printSettings.adminFeeRules)
@@ -734,13 +905,15 @@ fun ScanScreen(
                   val newAdmin = autoFee ?: currentReceipt.adminFee
                   onUpdateReceipt(currentReceipt.copy(amount = amt, adminFee = newAdmin))
                 },
-                label = { Text("5. NOMINAL (Rp)") },
+                label = { Text("7. Nominal Transfer (Rp)") },
                 isError = nominalError != null,
                 supportingText = {
                   if (nominalError != null) {
                     Text(nominalError, color = MaterialTheme.colorScheme.error)
                   } else if (currentReceipt.amount > 0) {
-                    Text("Terbaca: ${currentReceipt.formattedAmount}", color = MaterialTheme.colorScheme.primary)
+                    Text("✓ Nominal transfer terdeteksi: ${currentReceipt.formattedAmount}", color = MaterialTheme.colorScheme.primary)
+                  } else {
+                    Text("Jumlah uang transfer (bukan saldo atau biaya admin)", color = MaterialTheme.colorScheme.onSurfaceVariant)
                   }
                 },
                 leadingIcon = { Icon(Icons.Filled.AttachMoney, contentDescription = null) },
@@ -1297,6 +1470,53 @@ fun ScanScreen(
           colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
         ) {
           Text("Lengkapi Sekarang")
+        }
+      }
+    )
+  }
+
+  // Dialog Lihat Gambar Asli (Penuh & Jelas)
+  if (showOriginalImageDialog && currentImageUri != null) {
+    AlertDialog(
+      onDismissRequest = { showOriginalImageDialog = false },
+      title = {
+        Row(
+          modifier = Modifier.fillMaxWidth(),
+          horizontalArrangement = Arrangement.SpaceBetween,
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          Text(
+            text = "Gambar Bukti Transfer Asli",
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+          )
+          IconButton(onClick = { showOriginalImageDialog = false }) {
+            Icon(Icons.Filled.Close, contentDescription = "Tutup")
+          }
+        }
+      },
+      text = {
+        Box(
+          modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(max = 500.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant),
+          contentAlignment = Alignment.Center
+        ) {
+          AsyncImage(
+            model = currentImageUri,
+            contentDescription = "Gambar Bukti Transfer Asli Penuh",
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Fit
+          )
+        }
+      },
+      confirmButton = {
+        Button(
+          onClick = { showOriginalImageDialog = false },
+          colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+        ) {
+          Text("Tutup")
         }
       }
     )

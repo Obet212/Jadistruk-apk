@@ -1509,7 +1509,9 @@ fun TemplateEditorScreen(
 
 private fun getFieldColor(field: TargetRecipientField): Color {
   return when (field) {
+    TargetRecipientField.TANGGAL -> Color(0xFF1D4ED8) // Deep Blue
     TargetRecipientField.WAKTU -> Color(0xFF2563EB) // Blue
+    TargetRecipientField.REFERENSI -> Color(0xFF9333EA) // Violet
     TargetRecipientField.BANK -> Color(0xFF0891B2) // Cyan / Teal
     TargetRecipientField.REKENING -> Color(0xFFD97706) // Amber
     TargetRecipientField.PENERIMA -> Color(0xFF7C3AED) // Purple

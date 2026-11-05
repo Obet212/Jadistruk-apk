@@ -5,19 +5,21 @@ import java.util.Locale
 
 data class Receipt(
   val id: Long = 0L,
-  // 1. WAKTU
+  // 1. TANGGAL (DD/MM/YYYY)
   val transactionDate: String = "",
-  // 2. BANK
+  // 2. WAKTU (HH:mm:ss atau HH:mm)
+  val transactionTime: String = "",
+  // 3. BANK TUJUAN
   val recipientBank: String = "",
-  // 3. REKENING
+  // 4. NOMOR REKENING
   val recipientAccount: String = "",
-  // 4. PENERIMA
+  // 5. NAMA PENERIMA
   val recipientName: String = "",
-  // 5. NOMINAL
+  // 6. NOMINAL
   val amount: Long = 0L,
-  // 6. ADMIN (diisi manual)
+  // 7. BIAYA ADMIN
   val adminFee: Long = 0L,
-  // Other supporting fields
+  // 8. REFERENSI / KODE TRANSAKSI
   val refNumber: String = "",
   val notes: String = "",
   val rawOcrText: String = "",
@@ -26,9 +28,37 @@ data class Receipt(
   val candidateConflicts: Map<TargetRecipientField, List<String>> = emptyMap(),
   val reviewFlags: List<String> = emptyList(),
 ) {
-  // 7. TOTAL (dihitung otomatis: NOMINAL + ADMIN)
+  // TOTAL (dihitung otomatis: NOMINAL + ADMIN)
   val total: Long
     get() = amount + adminFee
+
+  val displayDate: String
+    get() {
+      val trimmed = transactionDate.trim()
+      if (trimmed.isBlank()) return ""
+      val parts = trimmed.split(Regex("\\s+"))
+      return parts.firstOrNull { it.contains("/") || it.contains("-") || it.contains(".") } ?: parts[0]
+    }
+
+  val displayTime: String
+    get() {
+      if (transactionTime.isNotBlank()) return transactionTime.trim()
+      val trimmed = transactionDate.trim()
+      val parts = trimmed.split(Regex("\\s+"))
+      return parts.firstOrNull { it.contains(":") } ?: ""
+    }
+
+  val fullDateTime: String
+    get() {
+      val d = displayDate
+      val t = displayTime
+      return when {
+        d.isNotBlank() && t.isNotBlank() -> "$d $t"
+        d.isNotBlank() -> d
+        t.isNotBlank() -> t
+        else -> ""
+      }
+    }
 
   val formattedAmount: String
     get() = formatRupiah(amount)

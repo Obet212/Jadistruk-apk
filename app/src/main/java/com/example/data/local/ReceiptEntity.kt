@@ -19,20 +19,27 @@ data class ReceiptEntity(
   val rawOcrText: String,
   val createdAt: Long = System.currentTimeMillis(),
 ) {
-  fun toModel(): Receipt =
-    Receipt(
+  fun toModel(): Receipt {
+    val trimmed = transactionDate.trim()
+    val parts = trimmed.split(Regex("\\s+"))
+    val datePart = parts.firstOrNull { it.contains("/") || it.contains("-") || it.contains(".") } ?: parts.firstOrNull() ?: ""
+    val timePart = parts.firstOrNull { it.contains(":") } ?: ""
+
+    return Receipt(
       id = id,
       recipientName = recipientName,
       recipientBank = recipientBank,
       recipientAccount = recipientAccount,
       amount = amount,
       adminFee = adminFee,
-      transactionDate = transactionDate,
+      transactionDate = datePart.ifBlank { trimmed },
+      transactionTime = timePart,
       refNumber = refNumber,
       notes = notes,
       rawOcrText = rawOcrText,
       createdAt = createdAt,
     )
+  }
 
   companion object {
     fun fromModel(model: Receipt): ReceiptEntity =
@@ -43,7 +50,7 @@ data class ReceiptEntity(
         recipientAccount = model.recipientAccount,
         amount = model.amount,
         adminFee = model.adminFee,
-        transactionDate = model.transactionDate,
+        transactionDate = model.fullDateTime.ifBlank { model.transactionDate },
         refNumber = model.refNumber,
         notes = model.notes,
         rawOcrText = model.rawOcrText,
