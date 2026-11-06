@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "718386140735",
+    "project_id": "jadistruk",
+    "storage_bucket": "jadistruk.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:718386140735:android:50e7374fcfd2387e5c4a8a",
+        "android_client_info": {
+          "package_name": "com.aistudio.jadistruk.rpxm"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCIaF7CSNxV1ea3T1pTfujNuHzLn6LLXt0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

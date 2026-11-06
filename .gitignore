@@ -26,5 +26,6 @@ APK_DOWNLOAD
 /tmp
 .aistudio
 .build-outputs
+/public
 
 

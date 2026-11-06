@@ -3,8 +3,9 @@ package com.example.data.remote
 import android.content.Context
 import android.util.Log
 import com.example.BuildConfig
-import com.example.R
+import com.example.JadiStrukApp
 import com.google.firebase.Firebase
+import com.google.firebase.FirebaseApp
 import com.google.firebase.remoteconfig.FirebaseRemoteConfig
 import com.google.firebase.remoteconfig.remoteConfig
 import com.google.firebase.remoteconfig.remoteConfigSettings
@@ -12,7 +13,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
 
 sealed interface AppUpdateStatus {
   data object Checking : AppUpdateStatus
@@ -56,7 +56,7 @@ class RemoteConfigManager(private val context: Context) {
     const val KEY_UPDATE_MESSAGE = "update_message"
     const val KEY_UPDATE_URL = "update_url"
 
-    private const val DEFAULT_LATEST_VERSION = "1.9"
+    private const val DEFAULT_LATEST_VERSION = "2.0"
     private const val DEFAULT_MINIMUM_VERSION = "1.0"
     private const val DEFAULT_UPDATE_TITLE = "Pembaruan Aplikasi Tersedia"
     private const val DEFAULT_UPDATE_MESSAGE =
@@ -64,53 +64,111 @@ class RemoteConfigManager(private val context: Context) {
     private const val DEFAULT_UPDATE_URL = "https://github.com/Obet212/Jadistruk-apk/releases"
   }
 
-  private val remoteConfig: FirebaseRemoteConfig by lazy {
-    Firebase.remoteConfig
+  @Volatile
+  private var isConfigured = false
+
+  /**
+   * Mengambil instance FirebaseRemoteConfig secara aman.
+   * Memastikan FirebaseApp telah terinisialisasi dan tidak memicu IllegalStateException
+   * jika proses FirebaseApp belum siap atau berjalan di lingkungan offline/testing.
+   */
+  private fun getRemoteConfigInstance(): FirebaseRemoteConfig? {
+    return try {
+      val isReady = JadiStrukApp.ensureFirebaseInitialized(context)
+      if (!isReady || FirebaseApp.getApps(context).isEmpty()) {
+        Log.w(TAG, "FirebaseApp belum tersedia, menunda akses Remote Config.")
+        return null
+      }
+
+      val config = Firebase.remoteConfig
+      configureRemoteConfigSettings(config)
+      config
+    } catch (e: Exception) {
+      Log.w(TAG, "Gagal mengakses Firebase Remote Config: ${e.message}")
+      null
+    }
+  }
+
+  /**
+   * Mengonfigurasi parameter fetch interval dan nilai in-app default sekali saja.
+   */
+  private fun configureRemoteConfigSettings(config: FirebaseRemoteConfig) {
+    if (isConfigured) return
+    synchronized(this) {
+      if (isConfigured) return
+      try {
+        val configSettings = remoteConfigSettings {
+          // Interval 0 detik agar pembaruan langsung terdeteksi setiap kali aplikasi dibuka
+          minimumFetchIntervalInSeconds = 0L
+          fetchTimeoutInSeconds = 8L
+        }
+        config.setConfigSettingsAsync(configSettings)
+
+        // Tetapkan in-app default fallback
+        val defaults = mapOf(
+          KEY_LATEST_VERSION to DEFAULT_LATEST_VERSION,
+          KEY_MINIMUM_VERSION to DEFAULT_MINIMUM_VERSION,
+          KEY_UPDATE_TITLE to DEFAULT_UPDATE_TITLE,
+          KEY_UPDATE_MESSAGE to DEFAULT_UPDATE_MESSAGE,
+          KEY_UPDATE_URL to DEFAULT_UPDATE_URL
+        )
+        config.setDefaultsAsync(defaults)
+        isConfigured = true
+        Log.d(TAG, "Firebase Remote Config berhasil dikonfigurasi dengan in-app defaults.")
+      } catch (e: Exception) {
+        Log.w(TAG, "Gagal mengonfigurasi setelan Remote Config: ${e.message}")
+      }
+    }
   }
 
   init {
+    // Jalankan inisialisasi pasif tanpa memblokir konstruktor
     try {
-      val configSettings = remoteConfigSettings {
-        // Interval 0 detik agar pembaruan langsung terdeteksi setiap kali aplikasi dibuka
-        minimumFetchIntervalInSeconds = 0L
-        fetchTimeoutInSeconds = 8L
-      }
-      remoteConfig.setConfigSettingsAsync(configSettings)
-
-      // Tetapkan in-app default fallback
-      val defaults = mapOf(
-        KEY_LATEST_VERSION to DEFAULT_LATEST_VERSION,
-        KEY_MINIMUM_VERSION to DEFAULT_MINIMUM_VERSION,
-        KEY_UPDATE_TITLE to DEFAULT_UPDATE_TITLE,
-        KEY_UPDATE_MESSAGE to DEFAULT_UPDATE_MESSAGE,
-        KEY_UPDATE_URL to DEFAULT_UPDATE_URL
-      )
-      remoteConfig.setDefaultsAsync(defaults)
+      getRemoteConfigInstance()
     } catch (e: Exception) {
-      Log.e(TAG, "Gagal menginisialisasi setelan Remote Config: ${e.message}", e)
+      Log.w(TAG, "Inisialisasi awal RemoteConfigManager dilewati: ${e.message}")
     }
   }
 
   /**
    * Mengambil konfigurasi terbaru dari Firebase Remote Config dan mengecek apakah
    * aplikasi memerlukan pembaruan paksa (forced update).
+   *
+   * Jika Firebase tidak terjangkau atau jaringan offline, aplikasi tetap mengizinkan
+   * penggunaan normal tanpa memblokir alur kerja pengguna.
    */
   suspend fun checkAppVersion(currentVersionName: String = BuildConfig.VERSION_NAME): AppUpdateStatus =
     withContext(Dispatchers.IO) {
       try {
+        val remoteConfig = getRemoteConfigInstance()
+        if (remoteConfig == null) {
+          Log.w(TAG, "Remote Config tidak tersedia (Firebase offline/tidak terinisialisasi). Menggunakan fallback lokal.")
+          val isBelow = VersionComparator.isVersionBelowMinimum(currentVersionName, DEFAULT_MINIMUM_VERSION)
+          return@withContext if (isBelow) {
+            AppUpdateStatus.ForcedUpdateRequired(
+              currentVersion = currentVersionName,
+              latestVersion = DEFAULT_LATEST_VERSION,
+              minimumVersion = DEFAULT_MINIMUM_VERSION,
+              updateTitle = DEFAULT_UPDATE_TITLE,
+              updateMessage = DEFAULT_UPDATE_MESSAGE,
+              updateUrl = DEFAULT_UPDATE_URL
+            )
+          } else {
+            // Versi valid, biarkan pengguna masuk ke aplikasi tanpa memblokir
+            AppUpdateStatus.UpToDate(
+              currentVersion = currentVersionName,
+              latestVersion = DEFAULT_LATEST_VERSION
+            )
+          }
+        }
+
         // Ambil dan aktifkan nilai terbaru dari server Firebase
         val fetchSuccess = try {
           suspendCancellableCoroutine<Boolean> { cont ->
             remoteConfig.fetchAndActivate()
               .addOnCompleteListener { task ->
                 if (cont.isActive) {
-                  if (task.isSuccessful) {
-                    cont.resume(true)
-                  } else {
-                    cont.resumeWithException(
-                      task.exception ?: RuntimeException("Gagal mengambil data Firebase Remote Config")
-                    )
-                  }
+                  cont.resume(task.isSuccessful)
                 }
               }
           }
@@ -127,9 +185,8 @@ class RemoteConfigManager(private val context: Context) {
 
         Log.d(TAG, "Current: $currentVersionName, Min: $minimumVersion, Latest: $latestVersion, Fetched: $fetchSuccess")
 
-        // Jika fetch gagal total (misal offline), jangan mengunci aplikasi, berikan opsi coba lagi
+        // Jika fetch gagal total (misal offline)
         if (!fetchSuccess && minimumVersion == DEFAULT_MINIMUM_VERSION) {
-          // Tetap verifikasi apakah versi saat ini di bawah default minimum
           val isBelow = VersionComparator.isVersionBelowMinimum(currentVersionName, minimumVersion)
           return@withContext if (isBelow) {
             AppUpdateStatus.ForcedUpdateRequired(
