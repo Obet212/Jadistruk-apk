@@ -208,10 +208,15 @@ object FieldValidator {
   // =========================================================================
 
   /**
-   * Validasi Nomor Referensi / SN / Kode Transaksi:
-   * - Mempertahankan seluruh digit dan karakter asli, termasuk nol di depan.
-   * - Memprioritaskan kode transaksi > 15 digit.
-   * - Menolak nomor rekening, nomor telepon, atau angka nominal.
+   * Validasi Kode Referensi / Nomor Transaksi (JADISTRUK v2.1):
+   * - Pengenalan label: Referensi, Reference, Ref, Nomor Transaksi, ID Transaksi, Transaction ID, Serial Number, SN, Kode Transaksi.
+   * - Hanya menerima karakter angka 0–9.
+   * - Panjang wajib minimal 16 digit (lebih dari 15 digit).
+   * - Tolak kode yang mengandung huruf, spasi internal, atau simbol.
+   * - Pertahankan seluruh digit, termasuk angka nol di depan.
+   * - Simpan sebagai teks agar tidak terjadi pembulatan atau perubahan digit.
+   * - Menolak nomor rekening, nomor telepon, nominal transfer, tanggal, atau waktu.
+   * - Jika tidak memenuhi aturan, kembalikan teks kosong (jangan menebak/melengkapi).
    */
   fun sanitizeRefNumber(raw: String, candidateAccount: String = ""): Pair<String, String?> {
     val trimmed = raw.trim()
@@ -219,35 +224,54 @@ object FieldValidator {
       return Pair("", "Nomor referensi belum terisi")
     }
 
-    // Bersihkan prefix label referensi
+    // Bersihkan prefix label referensi di awal teks jika ada
     val cleaned = trimmed.replace(
-      Regex("(?i)^(nomor\\s*referensi|no\\.?\\s*referensi|kode\\s*transaksi|transaction\\s*id|id\\s*transaksi|serial\\s*number|reference|no\\.?\\s*transaksi|no\\.?\\s*ref|reff?|sn)[:\\-\\s]+"),
+      Regex("(?i)^(?:nomor\\s*referensi|no\\.?\\s*referensi|nomor\\s*transaksi|no\\.?\\s*transaksi|kode\\s*transaksi|transaction\\s*id|id\\s*transaksi|serial\\s*number|reference|referensi|no\\.?\\s*ref|reff?|sn)[:\\-\\s]+"),
       ""
     ).trim()
 
-    // Ambil karakter alfanumerik yang membentuk kode referensi
-    val refCode = cleaned.filter { it.isLetterOrDigit() || it == '-' || it == '_' }
-
-    if (refCode.isBlank()) {
+    if (cleaned.isBlank()) {
       return Pair("", "Kode referensi tidak terbaca.")
     }
 
-    // Jangan mengambil nomor rekening sebagai referensi
+    // Tolak jika berupa nominal / mata uang
+    if (trimmed.contains("Rp", ignoreCase = true) || trimmed.contains("IDR", ignoreCase = true)) {
+      return Pair("", "Nilai berupa nominal, bukan kode referensi.")
+    }
+
+    // Tolak jika berupa pemisah tanggal / waktu (mengandung : atau /)
+    if (cleaned.contains(":") || cleaned.contains("/")) {
+      return Pair("", "Nilai berupa format waktu atau tanggal transaksi.")
+    }
+
+    // ATURAN FORMAT 1: Tolak jika mengandung spasi internal
+    if (cleaned.contains(" ")) {
+      return Pair("", "Kode referensi tidak valid: mengandung spasi internal.")
+    }
+
+    // ATURAN FORMAT 2: Hanya menerima karakter angka 0–9. Tolak kode yang mengandung huruf atau simbol.
+    if (!cleaned.all { it in '0'..'9' }) {
+      return Pair("", "Kode referensi tidak valid: hanya menerima karakter angka 0–9 tanpa huruf atau simbol.")
+    }
+
+    // ATURAN FORMAT 3: Panjang wajib lebih dari 15 digit atau minimal 16 digit
+    if (cleaned.length < 16) {
+      return Pair("", "Panjang kode referensi harus minimal 16 digit (terbaca ${cleaned.length} digit).")
+    }
+
+    // PENCEGAHAN 1: Jangan mengambil nomor rekening sebagai referensi
     val cleanAcc = candidateAccount.filter { it.isDigit() }
-    if (cleanAcc.isNotBlank() && refCode == cleanAcc) {
+    if (cleanAcc.isNotBlank() && cleaned == cleanAcc) {
       return Pair("", "Nilai sama persis dengan nomor rekening.")
     }
 
-    // Jangan mengambil mata uang / nominal sebagai referensi
-    if (trimmed.contains("Rp", ignoreCase = true) || trimmed.contains("IDR", ignoreCase = true)) {
-      return Pair("", "Nilai berupa nominal, bukan nomor referensi.")
+    // PENCEGAHAN 2: Jangan mengambil nomor telepon
+    if ((cleaned.startsWith("08") || cleaned.startsWith("628")) && cleaned.length in 10..14) {
+      return Pair("", "Nilai merupakan nomor telepon, bukan nomor referensi.")
     }
 
-    if (refCode.length < 6) {
-      return Pair("", "Kode referensi terlalu pendek (minimal 6 karakter).")
-    }
-
-    return Pair(refCode, null)
+    // Simpan sebagai teks murni tanpa memotong atau mengubah angka
+    return Pair(cleaned, null)
   }
 
   // =========================================================================

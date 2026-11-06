@@ -60,8 +60,14 @@ class VersionComparatorTest {
     // Current is 2.0, Minimum required is 1.9 -> Satisfied (false)
     assertFalse(VersionComparator.isVersionBelowMinimum("2.0", "1.9"))
 
-    // Current is 1.9, Minimum required is 2.0 -> Must update (true)
-    assertTrue(VersionComparator.isVersionBelowMinimum("1.9", "2.0"))
+    // Current is 2.1, Minimum required is 2.1 -> Satisfied (false)
+    assertFalse(VersionComparator.isVersionBelowMinimum("2.1", "2.1"))
+
+    // Current is 2.1, Minimum required is 2.0 -> Satisfied (false)
+    assertFalse(VersionComparator.isVersionBelowMinimum("2.1", "2.0"))
+
+    // Current is 2.0, Minimum required is 2.1 -> Must update (true)
+    assertTrue(VersionComparator.isVersionBelowMinimum("2.0", "2.1"))
   }
 
   @Test

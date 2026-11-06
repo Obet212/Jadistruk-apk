@@ -36,7 +36,7 @@ object MultiCategoryExtractor {
   private val ACCOUNT_LABEL = Regex("(?i)^(?:nomor\\s*rekening|no\\.?\\s*rekening|rekening\\s*tujuan|rekening\\s*penerima|no\\.?\\s*rek|account\\s*number|account|akun\\s*tujuan|ke\\s*rekening)[:\\-\\s]*$")
   private val DATE_LABEL = Regex("(?i)^(?:tanggal\\s*transaksi|transaction\\s*date|tgl\\s*transaksi|tanggal|tgl|date)[:\\-\\s]*$")
   private val TIME_LABEL = Regex("(?i)^(?:waktu\\s*transaksi|jam\\s*transaksi|transaction\\s*time|waktu|jam|time|pukul)[:\\-\\s]*$")
-  private val REF_LABEL = Regex("(?i)^(?:nomor\\s*referensi|no\\.?\\s*referensi|kode\\s*transaksi|transaction\\s*id|id\\s*transaksi|serial\\s*number|reference|no\\.?\\s*transaksi|no\\.?\\s*ref|reff?|sn)[:\\-\\s]*$")
+  private val REF_LABEL = Regex("(?i)^(?:nomor\\s*referensi|no\\.?\\s*referensi|referensi|reference|ref|nomor\\s*transaksi|no\\.?\\s*transaksi|id\\s*transaksi|transaction\\s*id|serial\\s*number|sn|kode\\s*transaksi|no\\.?\\s*ref)[:\\-\\s]*$")
   private val AMOUNT_LABEL = Regex("(?i)^(?:nominal\\s*transfer|jumlah\\s*transfer|total\\s*transfer|nominal|jumlah|amount|total\\s*diterima)[:\\-\\s]*$")
   private val ADMIN_LABEL = Regex("(?i)^(?:biaya\\s*admin|biaya\\s*transfer|admin\\s*fee|admin|fee)[:\\-\\s]*$")
   private val STATUS_OR_NOISE = Regex("(?i)^(?:transaksi\\s*berhasil|transfer\\s*berhasil|bukti\\s*transfer|status|berhasil|sukses|selesai|detail\\s*transaksi|kembali|bagikan|unduh|qris|bi-fast|real\\s*time\\s*online|llg|rtgs)$")
@@ -134,25 +134,30 @@ object MultiCategoryExtractor {
         }
       }
 
-      // 3. REFERENSI / KODE TRANSAKSI
+      // 3. REFERENSI / KODE TRANSAKSI (Angka murni >= 16 digit)
       else if (isRefLabel(line) || hasRefPrefix(line)) {
-        val inlineVal = extractInlineValue(line)
+        val inlineVal = extractRefInlineValue(line).ifBlank { extractInlineValue(line) }
         val candidateText = if (inlineVal.isNotBlank()) inlineVal else nextLine ?: ""
-        val (sanitized, issue) = FieldValidator.sanitizeRefNumber(candidateText)
+        val (sanitized, issue) = FieldValidator.sanitizeRefNumber(candidateText, candidateAccount = rekeningCandidate?.value ?: "")
         if (sanitized.isNotBlank() && issue == null) {
-          val conf = if (designatedField == TargetRecipientField.REFERENSI) 98 else 95
+          val conf = if (designatedField == TargetRecipientField.REFERENSI) 99 else 95
           referensiCandidate = ExtractedCandidate(
             field = TargetRecipientField.REFERENSI,
             value = sanitized,
             rawText = candidateText,
             confidence = conf,
             sourceAreaId = sourceAreaId,
-            reason = "Nomor referensi / SN transaksi: $sanitized"
+            reason = "Kode referensi angka murni minimal 16 digit: $sanitized"
           )
           consumedIndices.add(i)
           if (inlineVal.isBlank() && nextLine != null) {
             consumedIndices.add(i + 1)
             i++
+          }
+        } else {
+          // Jika tidak memenuhi syarat angka murni minimal 16 digit, biarkan kolom referensi kosong
+          if (candidateText.isNotBlank()) {
+            reviewRequired.add("Kode referensi setelah label '$line': ${issue ?: "Format tidak valid"}")
           }
         }
       }
@@ -524,7 +529,18 @@ object MultiCategoryExtractor {
 
   private fun isRefLabel(str: String): Boolean = REF_LABEL.matches(str.trim())
   private fun hasRefPrefix(str: String): Boolean =
-    str.contains(":") && Regex("(?i)^(?:nomor\\s*referensi|no\\.?\\s*referensi|reference|ref|kode\\s*transaksi|sn)").containsMatchIn(str)
+    Regex("(?i)^(?:nomor\\s*referensi|no\\.?\\s*referensi|referensi|reference|ref|nomor\\s*transaksi|no\\.?\\s*transaksi|id\\s*transaksi|transaction\\s*id|serial\\s*number|sn|kode\\s*transaksi|no\\.?\\s*ref)[:\\-\\s]").containsMatchIn(str.trim())
+
+  private fun extractRefInlineValue(line: String): String {
+    if (line.contains(":")) {
+      return line.substringAfter(":").trim()
+    }
+    if (line.contains("=")) {
+      return line.substringAfter("=").trim()
+    }
+    val match = Regex("(?i)^(?:nomor\\s*referensi|no\\.?\\s*referensi|referensi|reference|ref|nomor\\s*transaksi|no\\.?\\s*transaksi|id\\s*transaksi|transaction\\s*id|serial\\s*number|sn|kode\\s*transaksi|no\\.?\\s*ref)[\\s\\-]+([0-9]{16,})").find(line.trim())
+    return match?.groupValues?.get(1)?.trim() ?: ""
+  }
 
   private fun isBankLabel(str: String): Boolean = BANK_LABEL.matches(str.trim())
   private fun hasBankPrefix(str: String): Boolean =

@@ -127,25 +127,49 @@ class OcrCategoryDetectionTest {
 
   @Test
   fun testReferenceNumberValidation() {
-    // 1. Kode transaksi panjang > 15 karakter dengan nol di depan
+    // 1. Kode transaksi panjang > 15 digit murni angka dengan nol di depan
     val (ref1, err1) = FieldValidator.sanitizeRefNumber("REF: 002026102843500282289238639")
     assertEquals("002026102843500282289238639", ref1)
+    assertTrue(ref1.startsWith("00"))
     assertNull(err1)
 
-    // 2. Serial number alfanumerik
-    val (ref2, err2) = FieldValidator.sanitizeRefNumber("Kode Transaksi: TRX-2026-ABCD-9988")
-    assertEquals("TRX-2026-ABCD-9988", ref2)
-    assertNull(err2)
+    // 2. Tepat 16 digit angka murni
+    val (refExact16, errExact16) = FieldValidator.sanitizeRefNumber("Nomor Transaksi: 1234567890123456")
+    assertEquals("1234567890123456", refExact16)
+    assertNull(errExact16)
 
-    // 3. Menolak jika nilai sama persis dengan nomor rekening
+    // 3. Menolak kode yang mengandung huruf dan simbol (TRX-2026-ABCD-9988)
+    val (refAlpha, errAlpha) = FieldValidator.sanitizeRefNumber("Kode Transaksi: TRX-2026-ABCD-9988")
+    assertEquals("", refAlpha)
+    assertNotNull(errAlpha)
+    assertTrue(errAlpha?.contains("hanya menerima karakter angka 0–9") == true)
+
+    // 4. Menolak kode yang mengandung spasi internal
+    val (refSpace, errSpace) = FieldValidator.sanitizeRefNumber("ID Transaksi: 2026 1028 4350 0282")
+    assertEquals("", refSpace)
+    assertNotNull(errSpace)
+    assertTrue(errSpace?.contains("spasi internal") == true)
+
+    // 5. Menolak kode kurang dari 16 digit (misal 15 digit)
+    val (ref15, err15) = FieldValidator.sanitizeRefNumber("Reference: 123456789012345")
+    assertEquals("", ref15)
+    assertNotNull(err15)
+    assertTrue(err15?.contains("minimal 16 digit") == true)
+
+    // 6. Menolak jika nilai sama persis dengan nomor rekening
     val (refDup, errDup) = FieldValidator.sanitizeRefNumber("001601120412504", candidateAccount = "001601120412504")
     assertEquals("", refDup)
     assertNotNull(errDup)
 
-    // 4. Menolak jika berupa nominal uang
+    // 7. Menolak jika berupa nominal uang
     val (refNom, errNom) = FieldValidator.sanitizeRefNumber("Rp 240.000")
     assertEquals("", refNom)
     assertNotNull(errNom)
+
+    // 8. Menolak nomor telepon
+    val (refPhone, errPhone) = FieldValidator.sanitizeRefNumber("081234567890")
+    assertEquals("", refPhone)
+    assertNotNull(errPhone)
   }
 
   @Test
