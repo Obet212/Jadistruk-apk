@@ -7,6 +7,7 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -111,8 +112,10 @@ fun ScanScreen(
   ocrState: OcrUiState,
   currentReceipt: Receipt,
   currentImageUri: Uri?,
+  smartReaderResult: com.example.data.smartreader.SmartParsedReceipt? = null,
   onProcessImageUri: (Uri) -> Unit,
   onUpdateReceipt: (Receipt) -> Unit,
+  onSwitchSmartReaderSource: (com.example.data.smartreader.TransactionSource) -> Unit = {},
   onSaveReceipt: (onSaved: (Long) -> Unit) -> Unit,
   onViewPrintPreview: () -> Unit,
   onResetScan: () -> Unit,
@@ -434,6 +437,125 @@ fun ScanScreen(
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
           ) {
             Column(modifier = Modifier.padding(18.dp)) {
+              // JADISTRUK SMART READER HEADER & SOURCE SELECTOR
+              if (smartReaderResult != null) {
+                Card(
+                  modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp),
+                  shape = RoundedCornerShape(12.dp),
+                  colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
+                  ),
+                  border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
+                ) {
+                  Column(modifier = Modifier.padding(12.dp)) {
+                    Row(
+                      modifier = Modifier.fillMaxWidth(),
+                      horizontalArrangement = Arrangement.SpaceBetween,
+                      verticalAlignment = Alignment.CenterVertically
+                    ) {
+                      Row(verticalAlignment = Alignment.CenterVertically) {
+                        Surface(
+                          shape = RoundedCornerShape(6.dp),
+                          color = Color(smartReaderResult.source.primaryColorHex),
+                          modifier = Modifier.padding(end = 8.dp)
+                        ) {
+                          Text(
+                            text = smartReaderResult.source.displayName,
+                            color = Color.White,
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                          )
+                        }
+                        Text(
+                          text = "JADISTRUK Smart Reader",
+                          style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                          color = MaterialTheme.colorScheme.onSurface
+                        )
+                      }
+
+                      Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant)
+                      ) {
+                        Text(
+                          text = "Akurasi: ${smartReaderResult.confidenceScore}%",
+                          style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                          color = if (smartReaderResult.confidenceScore >= 75) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.tertiary,
+                          modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                        )
+                      }
+                    }
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    Text(
+                      text = "Sumber: ${smartReaderResult.source.displayName} • Ekstraksi modular otomatis",
+                      style = MaterialTheme.typography.bodySmall,
+                      color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    // Source Switcher Chips
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                      text = "Ganti template bank/e-wallet jika salah deteksi:",
+                      style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
+                      color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    LazyRow(
+                      horizontalArrangement = Arrangement.spacedBy(6.dp),
+                      contentPadding = PaddingValues(horizontal = 1.dp)
+                    ) {
+                      items(com.example.data.smartreader.TransactionSource.entries) { src ->
+                        val isCurrent = smartReaderResult.source == src
+                        SuggestionChip(
+                          onClick = { onSwitchSmartReaderSource(src) },
+                          label = {
+                            Text(
+                              src.displayName,
+                              style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal
+                              )
+                            )
+                          },
+                          colors = SuggestionChipDefaults.suggestionChipColors(
+                            containerColor = if (isCurrent) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
+                          ),
+                          border = BorderStroke(
+                            1.dp,
+                            if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
+                          )
+                        )
+                      }
+                    }
+
+                    // Warning / Missing fields notes
+                    val allNotices = (smartReaderResult.missingFields + smartReaderResult.reviewWarnings).distinct()
+                    if (allNotices.isNotEmpty()) {
+                      Spacer(modifier = Modifier.height(8.dp))
+                      Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.4f),
+                        modifier = Modifier.fillMaxWidth()
+                      ) {
+                        Column(modifier = Modifier.padding(8.dp)) {
+                          allNotices.forEach { notice ->
+                            Text(
+                              text = "• $notice",
+                              style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                              color = MaterialTheme.colorScheme.onTertiaryContainer
+                            )
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+
               Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -441,12 +563,12 @@ fun ScanScreen(
               ) {
                 Column(modifier = Modifier.weight(1f)) {
                   Text(
-                    text = "7 Kolom Hasil Scan Bukti Transfer",
+                    text = "Formulir Hasil Pembacaan Transaksi",
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.onSurface
                   )
                   Text(
-                    text = "Tanggal, Waktu, Referensi, Bank, Rekening, Penerima, Nominal",
+                    text = "Dapat diedit langsung, salin teks per kolom, dan diverifikasi sebelum cetak",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                   )
@@ -777,8 +899,20 @@ fun ScanScreen(
                   },
                   leadingIcon = { Icon(Icons.Filled.AccountBalance, contentDescription = null) },
                   trailingIcon = {
-                    if (bankMatch.isConfident) {
-                      Icon(Icons.Filled.Done, contentDescription = "Bank Resmi Terverifikasi", tint = MaterialTheme.colorScheme.primary)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                      if (currentReceipt.recipientBank.isNotBlank()) {
+                        IconButton(
+                          onClick = {
+                            clipboardManager.setText(AnnotatedString(currentReceipt.recipientBank))
+                            Toast.makeText(context, "Bank Tujuan disalin ke papan klip", Toast.LENGTH_SHORT).show()
+                          }
+                        ) {
+                          Icon(Icons.Filled.ContentCopy, contentDescription = "Salin Bank", modifier = Modifier.size(18.dp))
+                        }
+                      }
+                      if (bankMatch.isConfident) {
+                        Icon(Icons.Filled.Done, contentDescription = "Bank Resmi Terverifikasi", tint = MaterialTheme.colorScheme.primary)
+                      }
                     }
                   },
                   modifier = Modifier
@@ -839,8 +973,20 @@ fun ScanScreen(
                 },
                 leadingIcon = { Icon(Icons.Filled.CreditCard, contentDescription = null) },
                 trailingIcon = {
-                  if (currentReceipt.recipientAccount.isNotBlank() && !isTooLong) {
-                    Icon(Icons.Filled.Done, contentDescription = "Valid", tint = MaterialTheme.colorScheme.primary)
+                  Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (currentReceipt.recipientAccount.isNotBlank()) {
+                      IconButton(
+                        onClick = {
+                          clipboardManager.setText(AnnotatedString(currentReceipt.recipientAccount))
+                          Toast.makeText(context, "Nomor Rekening disalin ke papan klip", Toast.LENGTH_SHORT).show()
+                        }
+                      ) {
+                        Icon(Icons.Filled.ContentCopy, contentDescription = "Salin Rekening", modifier = Modifier.size(18.dp))
+                      }
+                    }
+                    if (currentReceipt.recipientAccount.isNotBlank() && !isTooLong) {
+                      Icon(Icons.Filled.Done, contentDescription = "Valid", tint = MaterialTheme.colorScheme.primary)
+                    }
                   }
                 },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -875,8 +1021,20 @@ fun ScanScreen(
                 },
                 leadingIcon = { Icon(Icons.Filled.Person, contentDescription = null) },
                 trailingIcon = {
-                  if (currentReceipt.recipientName.isNotBlank() && nameError == null) {
-                    Icon(Icons.Filled.Done, contentDescription = "Valid", tint = MaterialTheme.colorScheme.primary)
+                  Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (currentReceipt.recipientName.isNotBlank()) {
+                      IconButton(
+                        onClick = {
+                          clipboardManager.setText(AnnotatedString(currentReceipt.recipientName))
+                          Toast.makeText(context, "Nama Penerima disalin ke papan klip", Toast.LENGTH_SHORT).show()
+                        }
+                      ) {
+                        Icon(Icons.Filled.ContentCopy, contentDescription = "Salin Nama", modifier = Modifier.size(18.dp))
+                      }
+                    }
+                    if (currentReceipt.recipientName.isNotBlank() && nameError == null) {
+                      Icon(Icons.Filled.Done, contentDescription = "Valid", tint = MaterialTheme.colorScheme.primary)
+                    }
                   }
                 },
                 modifier = Modifier

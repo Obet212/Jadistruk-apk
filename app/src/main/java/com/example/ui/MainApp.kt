@@ -45,6 +45,15 @@ fun MainApp(
   val totalAmountSum by viewModel.totalAmountSum.collectAsState()
   val settings by viewModel.settings.collectAsState()
   val appUpdateStatus by viewModel.appUpdateStatus.collectAsState()
+  val sharedImageUri by viewModel.sharedImageUri.collectAsState()
+  val smartReaderResult by viewModel.smartReaderResult.collectAsState()
+
+  // Auto-switch to Scan screen when image is shared from external payment apps (DANA, BCA, etc.)
+  androidx.compose.runtime.LaunchedEffect(sharedImageUri) {
+    if (sharedImageUri != null) {
+      currentScreen = Screen.Scan
+    }
+  }
 
   var templateToEdit by remember { mutableStateOf<com.example.data.model.OcrTemplate?>(null) }
   var templateSampleImageUri by remember { mutableStateOf<android.net.Uri?>(null) }
@@ -141,11 +150,15 @@ fun MainApp(
             ocrState = ocrState,
             currentReceipt = currentReceipt,
             currentImageUri = currentImageUri,
+            smartReaderResult = smartReaderResult,
             onProcessImageUri = { uri ->
               viewModel.processImageUri(uri)
             },
             onUpdateReceipt = { updated ->
               viewModel.updateCurrentReceipt(updated)
+            },
+            onSwitchSmartReaderSource = { source ->
+              viewModel.switchSmartReaderSource(source)
             },
             onSaveReceipt = { onSaved ->
               viewModel.saveCurrentReceipt(onSaved)

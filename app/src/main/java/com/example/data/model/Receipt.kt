@@ -27,6 +27,11 @@ data class Receipt(
   val ocrResult: OcrResult? = null,
   val candidateConflicts: Map<TargetRecipientField, List<String>> = emptyMap(),
   val reviewFlags: List<String> = emptyList(),
+  // Field tambahan JADISTRUK SMART READER
+  val senderName: String = "",
+  val sourceApp: String = "",
+  val transactionType: String = "Transfer Bank",
+  val transactionStatus: String = "Berhasil",
 ) {
   // TOTAL (dihitung otomatis: NOMINAL + ADMIN)
   val total: Long

@@ -51,12 +51,18 @@ import com.example.ui.screens.update.ForcedUpdateScreen
 import com.example.ui.theme.MyApplicationTheme
 import com.example.ui.viewmodel.ReceiptViewModel
 
+import android.content.Intent
+import android.net.Uri
+import androidx.activity.viewModels
+
 class MainActivity : ComponentActivity() {
+  private val viewModel: ReceiptViewModel by viewModels()
+
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
+    handleIncomingShareIntent(intent)
     enableEdgeToEdge()
     setContent {
-      val viewModel: ReceiptViewModel = viewModel()
       val settings by viewModel.settings.collectAsState()
       val appUpdateStatus by viewModel.appUpdateStatus.collectAsState()
       val isFailureDismissed by viewModel.isUpdateFailureDismissed.collectAsState()
@@ -98,6 +104,23 @@ class MainActivity : ComponentActivity() {
             }
           }
         }
+      }
+    }
+  }
+
+  override fun onNewIntent(intent: Intent) {
+    super.onNewIntent(intent)
+    setIntent(intent)
+    handleIncomingShareIntent(intent)
+  }
+
+  private fun handleIncomingShareIntent(intent: Intent?) {
+    if (intent == null) return
+    if (intent.action == Intent.ACTION_SEND && intent.type?.startsWith("image/") == true) {
+      val imageUri = intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
+        ?: intent.clipData?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.uri
+      if (imageUri != null) {
+        viewModel.onSharedImageReceived(imageUri)
       }
     }
   }

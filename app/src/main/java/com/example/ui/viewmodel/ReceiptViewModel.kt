@@ -91,22 +91,45 @@ class ReceiptViewModel(application: Application) : AndroidViewModel(application)
   private val _currentImageUri = MutableStateFlow<Uri?>(null)
   val currentImageUri: StateFlow<Uri?> = _currentImageUri.asStateFlow()
 
+  private val _smartReaderResult = MutableStateFlow<com.example.data.smartreader.SmartParsedReceipt?>(null)
+  val smartReaderResult: StateFlow<com.example.data.smartreader.SmartParsedReceipt?> = _smartReaderResult.asStateFlow()
+
+  private val _sharedImageUri = MutableStateFlow<Uri?>(null)
+  val sharedImageUri: StateFlow<Uri?> = _sharedImageUri.asStateFlow()
+
+  fun onSharedImageReceived(uri: Uri) {
+    _sharedImageUri.value = uri
+    processImageUri(uri)
+  }
+
+  fun clearSharedImage() {
+    _sharedImageUri.value = null
+  }
+
   fun processImageUri(uri: Uri) {
     viewModelScope.launch {
       _currentImageUri.value = uri
-      _ocrState.value = OcrUiState.Processing("Membaca teks dari bukti transfer...")
+      _ocrState.value = OcrUiState.Processing("JADISTRUK Smart Reader: Membaca teks on-device...")
       try {
         val ocrResult = withContext(Dispatchers.IO) {
           textRecognizer.processImageUri(uri)
         }
 
         if (ocrResult.isEmpty) {
+          _smartReaderResult.value = null
           _ocrState.value = OcrUiState.Error("Tidak ada teks yang terdeteksi pada gambar. Pastikan gambar bukti transfer jelas, pencahayaan cukup, dan tidak buram.")
           return@launch
         }
 
-        _ocrState.value = OcrUiState.Processing("Menyimpan teks & koordinat bounding box...")
+        _ocrState.value = OcrUiState.Processing("Mendeteksi sumber transaksi & template khusus...")
         val templates = ocrTemplates.value
+
+        // Execute Smart Reader Engine (Source detection + dedicated parser + cross validation)
+        val smartParsed = withContext(Dispatchers.Default) {
+          com.example.data.smartreader.SmartReaderEngine.process(ocrResult)
+        }
+        _smartReaderResult.value = smartParsed
+
         val parsed = withContext(Dispatchers.Default) {
           ReceiptParser.parseOcrResult(ocrResult, templates)
         }
@@ -122,7 +145,27 @@ class ReceiptViewModel(application: Application) : AndroidViewModel(application)
         _ocrState.value = OcrUiState.Success(finalReceipt, uri)
       } catch (e: Exception) {
         val userFriendlyMessage = e.localizedMessage ?: "Terjadi kesalahan saat memproses gambar dengan ML Kit."
+        _smartReaderResult.value = null
         _ocrState.value = OcrUiState.Error(userFriendlyMessage)
+      }
+    }
+  }
+
+  fun switchSmartReaderSource(source: com.example.data.smartreader.TransactionSource) {
+    val ocr = _currentReceipt.value.ocrResult ?: return
+    viewModelScope.launch(Dispatchers.Default) {
+      val reParsedSmart = com.example.data.smartreader.SmartReaderEngine.parseWithSource(ocr, source)
+      _smartReaderResult.value = reParsedSmart
+
+      val updatedReceipt = reParsedSmart.toReceipt(receiptId = _currentReceipt.value.id).copy(ocrResult = ocr)
+      val autoFee = if (settings.value.autoApplyAdminFee && updatedReceipt.amount > 0L) {
+        com.example.data.model.AdminFeeRule.calculateAdminFee(updatedReceipt.amount, settings.value.adminFeeRules)
+      } else null
+      val finalReceipt = if (autoFee != null) updatedReceipt.copy(adminFee = autoFee) else updatedReceipt
+
+      _currentReceipt.value = finalReceipt
+      if (_ocrState.value is OcrUiState.Success) {
+        _ocrState.value = OcrUiState.Success(finalReceipt, _currentImageUri.value)
       }
     }
   }
@@ -190,6 +233,8 @@ class ReceiptViewModel(application: Application) : AndroidViewModel(application)
     _ocrState.value = OcrUiState.Idle
     _currentReceipt.value = Receipt()
     _currentImageUri.value = null
+    _smartReaderResult.value = null
+    _sharedImageUri.value = null
   }
 
   fun selectReceiptForDetail(receipt: Receipt) {
