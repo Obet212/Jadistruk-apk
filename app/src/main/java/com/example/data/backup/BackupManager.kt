@@ -251,6 +251,86 @@ class BackupManager(
   }
 
   /**
+   * Mengurai string JSON mentah menjadi BackupPackage terstruktur.
+   */
+  fun parseJsonToPackage(content: String): BackupPackage {
+    val root = JSONObject(content)
+    val format = root.optString("format", "")
+    val version = root.optInt("version", 1)
+    val settingsObj = root.optJSONObject("settings") ?: JSONObject()
+    val templatesArray = root.optJSONArray("templates") ?: JSONArray()
+
+    val rulesJson = settingsObj.optString("adminFeeRulesJson", "")
+    val adminRules = if (rulesJson.isNotBlank()) {
+      AdminFeeRule.rulesFromJson(rulesJson)
+    } else {
+      AdminFeeRule.defaultRules()
+    }
+
+    val restoredSettings = PrintSettings(
+      storeName = settingsObj.optString("storeName", "JADISTRUK POS"),
+      storeAddress = settingsObj.optString("storeAddress", ""),
+      storePhone = settingsObj.optString("storePhone", ""),
+      footerMessage = settingsObj.optString("footerMessage", "Terima kasih! Bukti transfer telah diverifikasi."),
+      paperWidthMm = settingsObj.optInt("paperWidthMm", 58),
+      showDate = settingsObj.optBoolean("showDate", true),
+      showRefNumber = settingsObj.optBoolean("showRefNumber", false),
+      autoAddHeader = settingsObj.optBoolean("autoAddHeader", true),
+      autoApplyAdminFee = settingsObj.optBoolean("autoApplyAdminFee", true),
+      adminFeeRules = adminRules,
+      selectedPrinterAddress = settingsObj.optString("selectedPrinterAddress", ""),
+      selectedPrinterName = settingsObj.optString("selectedPrinterName", ""),
+      autoCutPaper = settingsObj.optBoolean("autoCutPaper", true),
+      printFeedLines = settingsObj.optInt("printFeedLines", 3),
+      receiptTheme = ReceiptTheme.fromId(settingsObj.optString("receiptThemeId", "profesional")),
+      appTheme = AppTheme.fromId(settingsObj.optString("appThemeId", "ocean_blue"))
+    )
+
+    val templateItems = mutableListOf<BackupTemplateItem>()
+    for (i in 0 until templatesArray.length()) {
+      val tObj = templatesArray.getJSONObject(i)
+      templateItems.add(
+        BackupTemplateItem(
+          id = tObj.optLong("id", 0L),
+          bankName = tObj.optString("bankName", "Template ${i + 1}"),
+          category = tObj.optString("category", "Bank Transfer"),
+          detectionKeywords = tObj.optString("detectionKeywords", ""),
+          recipientPattern = tObj.optString("recipientPattern", ""),
+          accountPattern = tObj.optString("accountPattern", ""),
+          amountPattern = tObj.optString("amountPattern", ""),
+          isBuiltIn = tObj.optBoolean("isBuiltIn", false),
+          areaConfigJson = tObj.optString("areaConfigJson", ""),
+          sampleImageBase64 = tObj.optString("sampleImageBase64", "")
+        )
+      )
+    }
+
+    val timestamp = root.optLong("timestamp", System.currentTimeMillis())
+    val formattedDate = root.optString(
+      "formattedDate",
+      SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault()).format(Date(timestamp))
+    )
+    val appVersion = root.optString("appVersion", "2.2")
+
+    val metadata = BackupMetadata(
+      format = format,
+      version = version,
+      timestamp = timestamp,
+      formattedDate = formattedDate,
+      appVersion = appVersion,
+      storeName = restoredSettings.storeName,
+      templateCount = templateItems.size
+    )
+
+    return BackupPackage(
+      metadata = metadata,
+      settings = restoredSettings,
+      templates = templateItems,
+      rawJson = content
+    )
+  }
+
+  /**
    * Membaca dan memvalidasi file ".jadistruk" yang dipilih pengguna sebelum proses pemulihan.
    * Menolak jika file rusak, tidak lengkap, atau bukan format resmi JadiStruk.
    */
@@ -280,84 +360,7 @@ class BackupManager(
         return@withContext Result.failure(Exception("Versi format backup tidak valid ($version)."))
       }
 
-      val settingsObj = root.optJSONObject("settings")
-        ?: return@withContext Result.failure(Exception("Data pengaturan aplikasi tidak ditemukan dalam file backup."))
-
-      val templatesArray = root.optJSONArray("templates")
-        ?: return@withContext Result.failure(Exception("Data template tidak ditemukan dalam file backup."))
-
-      // Parsing Pengaturan Toko & Preferensi
-      val rulesJson = settingsObj.optString("adminFeeRulesJson", "")
-      val adminRules = if (rulesJson.isNotBlank()) {
-        AdminFeeRule.rulesFromJson(rulesJson)
-      } else {
-        AdminFeeRule.defaultRules()
-      }
-
-      val restoredSettings = PrintSettings(
-        storeName = settingsObj.optString("storeName", "JADISTRUK POS"),
-        storeAddress = settingsObj.optString("storeAddress", ""),
-        storePhone = settingsObj.optString("storePhone", ""),
-        footerMessage = settingsObj.optString("footerMessage", "Terima kasih! Bukti transfer telah diverifikasi."),
-        paperWidthMm = settingsObj.optInt("paperWidthMm", 58),
-        showDate = settingsObj.optBoolean("showDate", true),
-        showRefNumber = settingsObj.optBoolean("showRefNumber", false),
-        autoAddHeader = settingsObj.optBoolean("autoAddHeader", true),
-        autoApplyAdminFee = settingsObj.optBoolean("autoApplyAdminFee", true),
-        adminFeeRules = adminRules,
-        selectedPrinterAddress = settingsObj.optString("selectedPrinterAddress", ""),
-        selectedPrinterName = settingsObj.optString("selectedPrinterName", ""),
-        autoCutPaper = settingsObj.optBoolean("autoCutPaper", true),
-        printFeedLines = settingsObj.optInt("printFeedLines", 3),
-        receiptTheme = ReceiptTheme.fromId(settingsObj.optString("receiptThemeId", "profesional")),
-        appTheme = AppTheme.fromId(settingsObj.optString("appThemeId", "ocean_blue"))
-      )
-
-      // Parsing Seluruh Template
-      val templateItems = mutableListOf<BackupTemplateItem>()
-      for (i in 0 until templatesArray.length()) {
-        val tObj = templatesArray.getJSONObject(i)
-        templateItems.add(
-          BackupTemplateItem(
-            id = tObj.optLong("id", 0L),
-            bankName = tObj.optString("bankName", "Template ${i + 1}"),
-            category = tObj.optString("category", "Bank Transfer"),
-            detectionKeywords = tObj.optString("detectionKeywords", ""),
-            recipientPattern = tObj.optString("recipientPattern", ""),
-            accountPattern = tObj.optString("accountPattern", ""),
-            amountPattern = tObj.optString("amountPattern", ""),
-            isBuiltIn = tObj.optBoolean("isBuiltIn", false),
-            areaConfigJson = tObj.optString("areaConfigJson", ""),
-            sampleImageBase64 = tObj.optString("sampleImageBase64", "")
-          )
-        )
-      }
-
-      val timestamp = root.optLong("timestamp", System.currentTimeMillis())
-      val formattedDate = root.optString(
-        "formattedDate",
-        SimpleDateFormat("dd MMM yyyy, HH:mm", Locale("id", "ID")).format(Date(timestamp))
-      )
-      val appVersion = root.optString("appVersion", "1.x")
-
-      val metadata = BackupMetadata(
-        format = format,
-        version = version,
-        timestamp = timestamp,
-        formattedDate = formattedDate,
-        appVersion = appVersion,
-        storeName = restoredSettings.storeName,
-        templateCount = templateItems.size
-      )
-
-      Result.success(
-        BackupPackage(
-          metadata = metadata,
-          settings = restoredSettings,
-          templates = templateItems,
-          rawJson = content
-        )
-      )
+      Result.success(parseJsonToPackage(content))
     } catch (e: Exception) {
       Log.e(TAG, "Gagal memvalidasi backup: ${e.message}", e)
       Result.failure(Exception("Gagal membaca file: ${e.localizedMessage ?: e.message}"))

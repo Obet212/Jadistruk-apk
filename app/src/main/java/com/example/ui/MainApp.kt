@@ -47,6 +47,7 @@ fun MainApp(
   val appUpdateStatus by viewModel.appUpdateStatus.collectAsState()
   val sharedImageUri by viewModel.sharedImageUri.collectAsState()
   val smartReaderResult by viewModel.smartReaderResult.collectAsState()
+  val syncStatus by viewModel.syncStatus.collectAsState()
 
   // Auto-switch to Scan screen when image is shared from external payment apps (DANA, BCA, etc.)
   androidx.compose.runtime.LaunchedEffect(sharedImageUri) {
@@ -226,7 +227,15 @@ fun MainApp(
             onCheckForUpdate = {
               viewModel.checkForAppUpdate()
             },
-            backupManager = viewModel.backupManager
+            backupManager = viewModel.backupManager,
+            deviceId = viewModel.deviceId,
+            syncStatus = syncStatus,
+            onTriggerAutoBackup = {
+              viewModel.triggerAutoBackup("manual_settings_screen")
+            },
+            onRegenerateDeviceId = {
+              viewModel.regenerateDeviceId()
+            }
           )
         }
 

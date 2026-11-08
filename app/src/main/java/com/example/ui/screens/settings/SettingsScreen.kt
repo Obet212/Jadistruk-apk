@@ -92,6 +92,13 @@ import com.example.data.model.AppTheme
 import com.example.data.model.PrintSettings
 import com.example.data.model.ReceiptTheme
 import com.example.data.remote.AppUpdateStatus
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Sync
+import com.example.data.backup.CloudSyncStatus
 import java.io.File
 import kotlinx.coroutines.launch
 
@@ -105,6 +112,10 @@ fun SettingsScreen(
   appUpdateStatus: AppUpdateStatus = AppUpdateStatus.UpToDate(BuildConfig.VERSION_NAME, BuildConfig.VERSION_NAME),
   onCheckForUpdate: () -> Unit = {},
   backupManager: BackupManager? = null,
+  deviceId: String = "",
+  syncStatus: CloudSyncStatus = CloudSyncStatus.Idle,
+  onTriggerAutoBackup: () -> Unit = {},
+  onRegenerateDeviceId: () -> Unit = {},
 ) {
   val context = LocalContext.current
   val coroutineScope = rememberCoroutineScope()
@@ -118,6 +129,7 @@ fun SettingsScreen(
   var pendingRestorePackage by remember { mutableStateOf<BackupPackage?>(null) }
   var restoreErrorMessage by remember { mutableStateOf<String?>(null) }
   var restoreSuccessMessage by remember { mutableStateOf<String?>(null) }
+  var showRegenerateDialog by remember { mutableStateOf(false) }
 
   val saveDocLauncher = rememberLauncherForActivityResult(
     ActivityResultContracts.CreateDocument("application/octet-stream")
@@ -1006,7 +1018,221 @@ fun SettingsScreen(
         }
       }
 
-      // 8. Save Button
+      // 8. Keamanan, Identitas Perangkat & Sinkronisasi Otomatis
+      item {
+        Card(
+          modifier = Modifier
+            .fillMaxWidth()
+            .testTag("card_security_and_device_identity"),
+          shape = RoundedCornerShape(14.dp),
+          colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+          elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        ) {
+          Column(modifier = Modifier.padding(16.dp)) {
+            // Header
+            Row(
+              modifier = Modifier.fillMaxWidth(),
+              verticalAlignment = Alignment.CenterVertically
+            ) {
+              Box(
+                modifier = Modifier
+                  .size(38.dp)
+                  .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+                contentAlignment = Alignment.Center
+              ) {
+                Icon(
+                  imageVector = Icons.Filled.Security,
+                  contentDescription = null,
+                  tint = MaterialTheme.colorScheme.primary,
+                  modifier = Modifier.size(22.dp)
+                )
+              }
+              Spacer(modifier = Modifier.width(12.dp))
+              Column(modifier = Modifier.weight(1f)) {
+                Text(
+                  text = "Keamanan & Identitas Perangkat",
+                  style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                  color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                  text = "Perlindungan layar & pencadangan otomatis (v2.2)",
+                  style = MaterialTheme.typography.bodySmall,
+                  color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+              }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Sub-item 1: Perlindungan Layar (FLAG_SECURE)
+            Surface(
+              shape = RoundedCornerShape(10.dp),
+              color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+              modifier = Modifier.fillMaxWidth()
+            ) {
+              Row(
+                modifier = Modifier.padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+              ) {
+                Box(
+                  modifier = Modifier
+                    .size(32.dp)
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f), CircleShape),
+                  contentAlignment = Alignment.Center
+                ) {
+                  Icon(
+                    imageVector = Icons.Filled.CheckCircle,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp)
+                  )
+                }
+                Spacer(modifier = Modifier.width(10.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                  Text(
+                    text = "Perlindungan Layar Aktif (FLAG_SECURE)",
+                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.onSurface
+                  )
+                  Text(
+                    text = "Screenshot dan rekaman layar dicegah demi melindungi data transaksi sensitif & privasi pelanggan.",
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                  )
+                }
+              }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Sub-item 2: Identitas Perangkat (Device ID Keystore)
+            Surface(
+              shape = RoundedCornerShape(10.dp),
+              color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+              modifier = Modifier.fillMaxWidth()
+            ) {
+              Column(
+                modifier = Modifier.padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+              ) {
+                Text(
+                  text = "Device ID Unik (Android Keystore)",
+                  style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                  color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                  text = "ID perangkat dibuat secara lokal menggunakan hardware Keystore. Digunakan untuk identifikasi data & pemulihan otomatis tanpa nomor IMEI.",
+                  style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                  color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Row(
+                  modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(8.dp))
+                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                  verticalAlignment = Alignment.CenterVertically
+                ) {
+                  Text(
+                    text = if (deviceId.isNotBlank()) deviceId else "Belum dibuat",
+                    style = MaterialTheme.typography.labelSmall.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace),
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.weight(1f),
+                    maxLines = 1
+                  )
+                  IconButton(
+                    onClick = {
+                      val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                      val clip = ClipData.newPlainText("Device ID", deviceId)
+                      clipboard.setPrimaryClip(clip)
+                      Toast.makeText(context, "Device ID disalin!", Toast.LENGTH_SHORT).show()
+                    },
+                    modifier = Modifier.size(24.dp)
+                  ) {
+                    Icon(
+                      imageVector = Icons.Filled.ContentCopy,
+                      contentDescription = "Salin Device ID",
+                      modifier = Modifier.size(16.dp),
+                      tint = MaterialTheme.colorScheme.primary
+                    )
+                  }
+                }
+
+                Row(
+                  modifier = Modifier.fillMaxWidth(),
+                  horizontalArrangement = Arrangement.End
+                ) {
+                  TextButton(
+                    onClick = { showRegenerateDialog = true },
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                  ) {
+                    Icon(Icons.Filled.Refresh, contentDescription = null, modifier = Modifier.size(14.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Regenerasi ID", style = MaterialTheme.typography.labelSmall)
+                  }
+                }
+              }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Sub-item 3: Sinkronisasi & Auto-Backup
+            Surface(
+              shape = RoundedCornerShape(10.dp),
+              color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+              modifier = Modifier.fillMaxWidth()
+            ) {
+              Column(
+                modifier = Modifier.padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+              ) {
+                Row(
+                  modifier = Modifier.fillMaxWidth(),
+                  verticalAlignment = Alignment.CenterVertically
+                ) {
+                  Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                      text = "Pencadangan & Pemulihan Otomatis",
+                      style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                      color = MaterialTheme.colorScheme.onSurface
+                    )
+                    val statusText = when (syncStatus) {
+                      is CloudSyncStatus.Syncing -> "Sedang menyinkronkan data..."
+                      is CloudSyncStatus.Success -> (syncStatus as CloudSyncStatus.Success).message
+                      is CloudSyncStatus.Error -> (syncStatus as CloudSyncStatus.Error).errorMessage
+                      is CloudSyncStatus.Idle -> "Siap. Otomatis mencadangkan saat data diubah dan saat aplikasi diminimize."
+                    }
+                    Text(
+                      text = statusText,
+                      style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                      color = if (syncStatus is CloudSyncStatus.Error) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                  }
+                }
+
+                OutlinedButton(
+                  onClick = {
+                    onTriggerAutoBackup()
+                    Toast.makeText(context, "Memulai pencadangan otomatis...", Toast.LENGTH_SHORT).show()
+                  },
+                  modifier = Modifier.fillMaxWidth(),
+                  shape = RoundedCornerShape(8.dp),
+                  enabled = syncStatus !is CloudSyncStatus.Syncing
+                ) {
+                  Icon(Icons.Filled.Sync, contentDescription = null, modifier = Modifier.size(16.dp))
+                  Spacer(modifier = Modifier.width(6.dp))
+                  Text(
+                    if (syncStatus is CloudSyncStatus.Syncing) "Menyinkronkan..." else "Cadangkan Otomatis Sekarang",
+                    style = MaterialTheme.typography.labelMedium
+                  )
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // 9. Save Button
       item {
         Button(
           onClick = {
@@ -1677,6 +1903,36 @@ fun SettingsScreen(
       confirmButton = {
         Button(onClick = { restoreSuccessMessage = null }) {
           Text("Selesai")
+        }
+      }
+    )
+  }
+
+  // DIALOG 5: KONFIRMASI REGENERASI DEVICE ID
+  if (showRegenerateDialog) {
+    AlertDialog(
+      onDismissRequest = { showRegenerateDialog = false },
+      icon = {
+        Icon(Icons.Filled.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+      },
+      title = { Text("Regenerasi Device ID?") },
+      text = {
+        Text("Apakah Anda yakin ingin membuat Device ID baru? Mekanisme ini dapat digunakan jika aplikasi dipasang ulang atau untuk mengidentifikasi perangkat secara baru. Data backup sebelumnya tetap aman tersimpan di brankas penyimpanan.")
+      },
+      confirmButton = {
+        Button(
+          onClick = {
+            onRegenerateDeviceId()
+            showRegenerateDialog = false
+            Toast.makeText(context, "Device ID baru berhasil dibuat & dicadangkan!", Toast.LENGTH_SHORT).show()
+          }
+        ) {
+          Text("Ya, Regenerasi")
+        }
+      },
+      dismissButton = {
+        TextButton(onClick = { showRegenerateDialog = false }) {
+          Text("Batal")
         }
       }
     )

@@ -60,6 +60,8 @@ class MainActivity : ComponentActivity() {
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
+    // FLAG_SECURE: cegah screenshot, screen recording, dan recent apps preview
+    com.example.data.security.ScreenProtectionManager.applyProtection(this)
     handleIncomingShareIntent(intent)
     enableEdgeToEdge()
     setContent {
@@ -123,6 +125,17 @@ class MainActivity : ComponentActivity() {
         viewModel.onSharedImageReceived(imageUri)
       }
     }
+  }
+
+  override fun onPause() {
+    super.onPause()
+    // Backup otomatis saat aplikasi ditangguhkan / diminimize (tidak hanya onDestroy)
+    viewModel.triggerAutoBackup("app_lifecycle_pause")
+  }
+
+  override fun onStop() {
+    super.onStop()
+    viewModel.triggerAutoBackup("app_lifecycle_stop")
   }
 }
 

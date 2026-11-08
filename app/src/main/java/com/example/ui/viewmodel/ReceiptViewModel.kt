@@ -40,6 +40,11 @@ class ReceiptViewModel(application: Application) : AndroidViewModel(application)
   val thermalPrinter = com.example.data.printer.BluetoothThermalPrinter(application)
   val remoteConfigManager = com.example.data.remote.RemoteConfigManager(application)
   val backupManager = com.example.data.backup.BackupManager(application, settingsManager, templateDao)
+  val deviceIdentityManager = com.example.data.security.DeviceIdentityManager(application)
+  val autoBackupSyncManager = com.example.data.backup.AutoBackupSyncManager(application, backupManager, deviceIdentityManager)
+
+  val deviceId: String get() = deviceIdentityManager.getOrCreateDeviceId()
+  val syncStatus: StateFlow<com.example.data.backup.CloudSyncStatus> = autoBackupSyncManager.syncStatus
 
   val settings: StateFlow<PrintSettings> = settingsManager.settings
 
@@ -53,6 +58,25 @@ class ReceiptViewModel(application: Application) : AndroidViewModel(application)
 
   init {
     checkForAppUpdate()
+    initStartupBackupAndSync()
+  }
+
+  private fun initStartupBackupAndSync() {
+    viewModelScope.launch {
+      autoBackupSyncManager.checkAndRestoreOnStartup()
+    }
+  }
+
+  fun triggerAutoBackup(reason: String = "manual") {
+    viewModelScope.launch {
+      autoBackupSyncManager.performAutoBackup(reason)
+    }
+  }
+
+  fun regenerateDeviceId(): String {
+    val newId = deviceIdentityManager.regenerateDeviceId()
+    triggerAutoBackup("re-identified")
+    return newId
   }
 
   fun checkForAppUpdate() {
@@ -216,17 +240,22 @@ class ReceiptViewModel(application: Application) : AndroidViewModel(application)
   fun saveTemplate(template: OcrTemplate) {
     viewModelScope.launch(Dispatchers.IO) {
       templateDao.insertTemplate(TemplateEntity.fromModel(template))
+      autoBackupSyncManager.performAutoBackup("template_saved")
     }
   }
 
   fun deleteTemplate(template: OcrTemplate) {
     viewModelScope.launch(Dispatchers.IO) {
       templateDao.deleteTemplate(TemplateEntity.fromModel(template))
+      autoBackupSyncManager.performAutoBackup("template_deleted")
     }
   }
 
   fun updateSettings(newSettings: PrintSettings) {
     settingsManager.updateSettings(newSettings)
+    viewModelScope.launch(Dispatchers.IO) {
+      autoBackupSyncManager.performAutoBackup("settings_updated")
+    }
   }
 
   fun resetScanState() {
