@@ -243,6 +243,7 @@ fun MainApp(
           ReceiptDetailScreen(
             receipt = currentReceipt,
             settings = settings,
+            onUpdateReceipt = { updated -> viewModel.updateCurrentReceipt(updated) },
             onBack = {
               currentScreen = previousScreen
             },

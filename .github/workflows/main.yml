@@ -1,9 +1,10 @@
 name: Build Android APK
+
 on:
   push:
     branches: [ "main", "master" ]
     tags:
-      - 'v*'
+      - "v*"
 
 permissions:
   contents: write
@@ -11,15 +12,19 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
     - uses: actions/checkout@v4
+
     - name: Set up JDK 17
       uses: actions/setup-java@v4
       with:
-        java-version: '17'
-        distribution: 'temurin'
+        java-version: "17"
+        distribution: "temurin"
+
     - name: Grant Execute Permission
       run: chmod +x ./gradlew
+
     - name: Restore Original Debug Keystore
       run: |
         if [ -f debug.keystore.base64 ]; then
@@ -27,23 +32,32 @@ jobs:
         elif [ ! -f debug.keystore ]; then
           keytool -genkey -v -keystore debug.keystore -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Android Debug,O=Android,C=US"
         fi
+
     - name: Build APK
       run: ./gradlew assembleDebug
+
     - name: Copy Named APK
-      run: cp app/build/outputs/apk/debug/app-debug.apk JadiStruk-2.2.apk
+      run: |
+        cp app/build/outputs/apk/debug/app-debug.apk OBETSTRUK-2.3.apk
+        cp app/build/outputs/apk/debug/app-debug.apk JadiStruk-2.3.apk
+
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: JadiStruk-APK
-        path: JadiStruk-2.2.apk
+        name: OBETSTRUK-APK
+        path: |
+          OBETSTRUK-2.3.apk
+          JadiStruk-2.3.apk
+
     - name: Publish to GitHub Release
       uses: softprops/action-gh-release@v2
       with:
-        tag_name: v2.2
-        name: JADISTRUK v2.2
+        tag_name: v2.3
+        name: OBETSTRUK v2.3
         draft: false
         prerelease: false
-        files: JadiStruk-2.2.apk
+        files: |
+          OBETSTRUK-2.3.apk
+          JadiStruk-2.3.apk
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-

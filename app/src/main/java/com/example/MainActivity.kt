@@ -124,6 +124,12 @@ class MainActivity : ComponentActivity() {
       if (imageUri != null) {
         viewModel.onSharedImageReceived(imageUri)
       }
+    } else if (intent.action == Intent.ACTION_SEND_MULTIPLE && intent.type?.startsWith("image/") == true) {
+      val uris = intent.getParcelableArrayListExtra<Uri>(Intent.EXTRA_STREAM)
+      val firstUri = uris?.firstOrNull() ?: intent.clipData?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.uri
+      if (firstUri != null) {
+        viewModel.onSharedImageReceived(firstUri)
+      }
     }
   }
 
