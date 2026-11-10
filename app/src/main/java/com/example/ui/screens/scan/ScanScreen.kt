@@ -161,7 +161,7 @@ fun ScanScreen(
         title = {
           Column {
             Text(
-              text = "OBETSTRUK - Terima Share Bukti",
+              text = "ESA STRUK - Terima Share Bukti",
               style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
             )
             Text(
@@ -440,7 +440,7 @@ fun ScanScreen(
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
           ) {
             Column(modifier = Modifier.padding(18.dp)) {
-              // OBETSTRUK SMART READER HEADER & SOURCE SELECTOR
+              // ESA STRUK SMART READER HEADER & SOURCE SELECTOR
               if (smartReaderResult != null) {
                 Card(
                   modifier = Modifier
@@ -472,7 +472,7 @@ fun ScanScreen(
                           )
                         }
                         Text(
-                          text = "OBETSTRUK Smart Reader",
+                          text = "ESA STRUK Smart Reader",
                           style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                           color = MaterialTheme.colorScheme.onSurface
                         )

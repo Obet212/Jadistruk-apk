@@ -200,7 +200,7 @@ fun SettingsScreen(
         title = {
           Column {
             Text(
-              text = "Pengaturan OBETSTRUK",
+              text = "Pengaturan ESA STRUK",
               style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
             )
             Text(
@@ -1785,7 +1785,7 @@ fun SettingsScreen(
       text = {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
           Text(
-            text = "Ditemukan file backup resmi OBETSTRUK yang valid:",
+            text = "Ditemukan file backup resmi ESA STRUK yang valid:",
             style = MaterialTheme.typography.bodySmall
           )
           Surface(

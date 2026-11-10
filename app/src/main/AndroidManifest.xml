@@ -48,13 +48,13 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- OBETSTRUK: Direct Share Receiver for Android Images -->
-            <intent-filter android:label="OBETSTRUK - Proses Bukti Transfer">
+            <!-- ESA STRUK: Direct Share Receiver for Android Images -->
+            <intent-filter android:label="ESA STRUK - Proses Bukti Transfer">
                 <action android:name="android.intent.action.SEND" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="image/*" />
             </intent-filter>
-            <intent-filter android:label="OBETSTRUK - Proses Bukti Multiple">
+            <intent-filter android:label="ESA STRUK - Proses Bukti Multiple">
                 <action android:name="android.intent.action.SEND_MULTIPLE" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="image/*" />

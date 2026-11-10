@@ -108,7 +108,7 @@ fun HomeScreen(
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                text = "OBETSTRUK",
+                                text = "ESA STRUK",
                                 style = MaterialTheme.typography.titleMedium.copy(
                                     fontWeight = FontWeight.ExtraBold,
                                     letterSpacing = 0.5.sp
