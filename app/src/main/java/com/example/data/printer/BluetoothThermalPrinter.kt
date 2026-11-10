@@ -395,7 +395,7 @@ class BluetoothThermalPrinter(private val context: Context) {
     add(CMD_DOUBLE_HEIGHT_ON)
     addLine("TES KONEKSI PRINTER")
     add(CMD_NORMAL_SIZE)
-    addLine("OBETSTRUK POS SYSTEM")
+    addLine("JADISTRUK POS SYSTEM")
     add(CMD_BOLD_OFF)
     addLine(divider)
 

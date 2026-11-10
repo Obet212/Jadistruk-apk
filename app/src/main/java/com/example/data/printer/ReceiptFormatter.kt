@@ -28,12 +28,11 @@ object ReceiptFormatter {
    */
   fun getFormattedLines(receipt: Receipt, settings: PrintSettings): List<FormattedLine> {
     val lineWidth = getLineWidth(settings.paperWidthMm)
-    val normReceipt = PrinterNormalizer.normalizeReceipt(receipt)
 
     return when (settings.receiptTheme) {
-      ReceiptTheme.SEDERHANA -> generateSederhanaLines(normReceipt, settings, lineWidth)
-      ReceiptTheme.PROFESIONAL -> generateProfesionalLines(normReceipt, settings, lineWidth)
-      ReceiptTheme.MODERN -> generateModernLines(normReceipt, settings, lineWidth)
+      ReceiptTheme.SEDERHANA -> generateSederhanaLines(receipt, settings, lineWidth)
+      ReceiptTheme.PROFESIONAL -> generateProfesionalLines(receipt, settings, lineWidth)
+      ReceiptTheme.MODERN -> generateModernLines(receipt, settings, lineWidth)
     }
   }
 
@@ -42,7 +41,6 @@ object ReceiptFormatter {
    */
   fun formatText(receipt: Receipt, settings: PrintSettings): String {
     val lineWidth = getLineWidth(settings.paperWidthMm)
-    val normReceipt = PrinterNormalizer.normalizeReceipt(receipt)
     val lines = getFormattedLines(receipt, settings)
     val sb = StringBuilder()
 

@@ -81,11 +81,21 @@ object DefaultTemplates {
         id = 8,
         bankName = "DANA",
         category = "E-Wallet",
-        detectionKeywords = "DANA, Kirim Uang, Transaksi Berhasil, Kirim ke Teman",
-        recipientPattern = "kirim\\s*ke|nama\\s*penerima|tujuan|penerima",
-        accountPattern = "nomor\\s*tujuan|nomor\\s*hp|akun\\s*tujuan",
+        detectionKeywords = "DANA, Kirim Uang, Transaksi Berhasil, Kirim ke Teman, Total Bayar, DANA Protection",
+        recipientPattern = "kirim\\s*ke|nama\\s*penerima|tujuan|penerima|wahyudi",
+        accountPattern = "nomor\\s*tujuan|nomor\\s*hp|akun\\s*dana|akun\\s*tujuan",
         amountPattern = "total\\s*bayar|jumlah|nominal",
         isBuiltIn = true,
+        areaConfigJson = AreaConfigHelper.toJson(
+          listOf(
+            FieldBoundingArea(field = TargetRecipientField.TANGGAL, normLeft = 0.04f, normTop = 0.200f, normRight = 0.50f, normBottom = 0.280f),
+            FieldBoundingArea(field = TargetRecipientField.WAKTU, normLeft = 0.04f, normTop = 0.200f, normRight = 0.50f, normBottom = 0.280f),
+            FieldBoundingArea(field = TargetRecipientField.NOMINAL, normLeft = 0.48f, normTop = 0.385f, normRight = 0.96f, normBottom = 0.445f),
+            FieldBoundingArea(field = TargetRecipientField.PENERIMA, normLeft = 0.35f, normTop = 0.570f, normRight = 0.96f, normBottom = 0.625f),
+            FieldBoundingArea(field = TargetRecipientField.REKENING, normLeft = 0.45f, normTop = 0.620f, normRight = 0.96f, normBottom = 0.665f),
+            FieldBoundingArea(field = TargetRecipientField.REFERENSI, normLeft = 0.45f, normTop = 0.700f, normRight = 0.96f, normBottom = 0.795f),
+          )
+        ),
       ),
       TemplateEntity(
         id = 9,

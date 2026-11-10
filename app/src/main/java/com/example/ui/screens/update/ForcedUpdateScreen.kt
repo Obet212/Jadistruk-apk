@@ -66,7 +66,7 @@ fun ForcedUpdateScreen(
   BackHandler(enabled = true) {
     Toast.makeText(
       context,
-      "Pembaruan wajib diperlukan untuk terus menggunakan OBETSTRUK.",
+      "Pembaruan wajib diperlukan untuk terus menggunakan JadiStruk.",
       Toast.LENGTH_SHORT
     ).show()
   }
@@ -244,7 +244,7 @@ fun ForcedUpdateScreen(
         Button(
           onClick = {
             try {
-              val targetUri = Uri.parse(updateInfo.updateUrl.ifBlank { "https://github.com/Obet212/Obetstruk-apk/releases" })
+              val targetUri = Uri.parse(updateInfo.updateUrl.ifBlank { "https://github.com/Obet212/Jadistruk-apk/releases" })
               val intent = Intent(Intent.ACTION_VIEW, targetUri).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
               }

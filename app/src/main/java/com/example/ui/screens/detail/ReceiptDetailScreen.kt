@@ -60,8 +60,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -119,7 +117,6 @@ fun ReceiptDetailScreen(
   isBluetoothSupported: () -> Boolean = { true },
   isBluetoothEnabled: () -> Boolean = { true },
   hasBluetoothPermission: () -> Boolean = { true },
-  onUpdateReceipt: (Receipt) -> Unit = {},
 ) {
   val context = LocalContext.current
   val clipboardManager = LocalClipboardManager.current
@@ -135,16 +132,6 @@ fun ReceiptDetailScreen(
   var showPermissionDialog by remember { mutableStateOf(false) }
   var showBluetoothDisabledDialog by remember { mutableStateOf(false) }
   var pairedPrintersList by remember { mutableStateOf<List<BluetoothPrinterDevice>>(emptyList()) }
-  var showEditReceiptDialog by remember { mutableStateOf(false) }
-  var editRecipientName by remember(receipt.recipientName) { mutableStateOf(receipt.recipientName) }
-  var editRecipientBank by remember(receipt.recipientBank) { mutableStateOf(receipt.recipientBank) }
-  var editRecipientAccount by remember(receipt.recipientAccount) { mutableStateOf(receipt.recipientAccount) }
-  var editAmountStr by remember(receipt.amount) { mutableStateOf(receipt.amount.toString()) }
-  var editAdminFeeStr by remember(receipt.adminFee) { mutableStateOf(receipt.adminFee.toString()) }
-  var editDate by remember(receipt.transactionDate) { mutableStateOf(receipt.transactionDate) }
-  var editTime by remember(receipt.transactionTime) { mutableStateOf(receipt.transactionTime) }
-  var editRef by remember(receipt.refNumber) { mutableStateOf(receipt.refNumber) }
-  var editNotes by remember(receipt.notes) { mutableStateOf(receipt.notes) }
 
   val activeConnectionState = printerConnectionState?.collectAsState()?.value
     ?: PrinterConnectionState.Unselected
@@ -654,48 +641,15 @@ fun ReceiptDetailScreen(
             }
           }
 
-          // Banner instruksi ketuk untuk edit langsung
-          Surface(
-            shape = RoundedCornerShape(8.dp),
-            color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f),
+          // Tampilan Kertas Thermal 100% Identik Hasil Cetak Asli
+          ThermalReceiptPreview(
+            receipt = receipt,
+            settings = activeSettings,
             modifier = Modifier
               .fillMaxWidth()
-              .padding(bottom = 6.dp)
-              .clickable { showEditReceiptDialog = true }
-          ) {
-            Row(
-              modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-              verticalAlignment = Alignment.CenterVertically
-            ) {
-              Icon(
-                imageVector = Icons.Filled.Edit,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                modifier = Modifier.size(16.dp)
-              )
-              Spacer(modifier = Modifier.width(6.dp))
-              Text(
-                text = "Ketuk pratinjau untuk edit langsung",
-                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
-                color = MaterialTheme.colorScheme.onSecondaryContainer
-              )
-            }
-          }
-
-          // Tampilan Kertas Thermal 100% Identik Hasil Cetak Asli (dapat diketuk untuk edit)
-          Box(
-            modifier = Modifier
-              .fillMaxWidth()
-              .clickable { showEditReceiptDialog = true }
-          ) {
-            ThermalReceiptPreview(
-              receipt = receipt,
-              settings = activeSettings,
-              modifier = Modifier
-                .fillMaxWidth()
-                .testTag("thermal_paper_card")
-            )
-          }
+              .testTag("thermal_paper_card")
+              .padding(top = 4.dp)
+          )
         }
       }
 
@@ -1275,117 +1229,6 @@ fun ReceiptDetailScreen(
           }
         ) {
           Text("Cetak via Sistem / PDF")
-        }
-      }
-    )
-  }
-
-  // POPUP EDIT LANGSUNG PREVIEW STRUK (KOLOM MANUAL & OTOMATIS)
-  if (showEditReceiptDialog) {
-    AlertDialog(
-      onDismissRequest = { showEditReceiptDialog = false },
-      title = {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-          Icon(Icons.Filled.Edit, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-          Spacer(Modifier.width(8.dp))
-          Text("Edit Data Struk", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
-        }
-      },
-      text = {
-        LazyColumn(modifier = Modifier.fillMaxWidth().height(360.dp)) {
-          item {
-            OutlinedTextField(
-              value = editRecipientName,
-              onValueChange = { editRecipientName = it },
-              label = { Text("Nama Penerima (Kolom Otomatis)") },
-              modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-              singleLine = true
-            )
-            OutlinedTextField(
-              value = editRecipientBank,
-              onValueChange = { editRecipientBank = it },
-              label = { Text("Bank / Dompet Digital") },
-              modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-              singleLine = true
-            )
-            OutlinedTextField(
-              value = editRecipientAccount,
-              onValueChange = { editRecipientAccount = it },
-              label = { Text("Nomor Rekening / HP (Pertahankan 0)") },
-              modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-              singleLine = true
-            )
-            OutlinedTextField(
-              value = editAmountStr,
-              onValueChange = { editAmountStr = it.filter { ch -> ch.isDigit() } },
-              label = { Text("Nominal Transfer (Rp)") },
-              modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-              singleLine = true
-            )
-            OutlinedTextField(
-              value = editAdminFeeStr,
-              onValueChange = { editAdminFeeStr = it.filter { ch -> ch.isDigit() } },
-              label = { Text("Biaya Admin (Manual)") },
-              modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-              singleLine = true
-            )
-            OutlinedTextField(
-              value = editDate,
-              onValueChange = { editDate = it },
-              label = { Text("Tanggal Transaksi") },
-              modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-              singleLine = true
-            )
-            OutlinedTextField(
-              value = editTime,
-              onValueChange = { editTime = it },
-              label = { Text("Waktu Transaksi") },
-              modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-              singleLine = true
-            )
-            OutlinedTextField(
-              value = editRef,
-              onValueChange = { editRef = it },
-              label = { Text("No. Referensi / Transaksi") },
-              modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-              singleLine = true
-            )
-            OutlinedTextField(
-              value = editNotes,
-              onValueChange = { editNotes = it },
-              label = { Text("Keterangan / Catatan") },
-              modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
-            )
-          }
-        }
-      },
-      confirmButton = {
-        Button(
-          onClick = {
-            val amountNum = editAmountStr.toLongOrNull() ?: receipt.amount
-            val adminNum = editAdminFeeStr.toLongOrNull() ?: receipt.adminFee
-            val updated = receipt.copy(
-              recipientName = editRecipientName.trim(),
-              recipientBank = editRecipientBank.trim(),
-              recipientAccount = editRecipientAccount.trim(),
-              amount = amountNum,
-              adminFee = adminNum,
-              transactionDate = editDate.trim(),
-              transactionTime = editTime.trim(),
-              refNumber = editRef.trim(),
-              notes = editNotes.trim()
-            )
-            onUpdateReceipt(updated)
-            showEditReceiptDialog = false
-            Toast.makeText(context, "Data struk berhasil diperbarui!", Toast.LENGTH_SHORT).show()
-          }
-        ) {
-          Text("Simpan")
-        }
-      },
-      dismissButton = {
-        TextButton(onClick = { showEditReceiptDialog = false }) {
-          Text("Batal")
         }
       }
     )

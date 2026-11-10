@@ -22,7 +22,7 @@
         android:required="false" />
 
     <application
-        android:name=".ObetStrukApp"
+        android:name=".JadiStrukApp"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -48,14 +48,9 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- ESA STRUK: Direct Share Receiver for Android Images -->
-            <intent-filter android:label="ESA STRUK - Proses Bukti Transfer">
+            <!-- JADISTRUK SMART READER: Direct Share Receiver for DANA, GoPay, BRImo, BCA, Livin, etc. -->
+            <intent-filter android:label="JADISTRUK Smart Reader">
                 <action android:name="android.intent.action.SEND" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <data android:mimeType="image/*" />
-            </intent-filter>
-            <intent-filter android:label="ESA STRUK - Proses Bukti Multiple">
-                <action android:name="android.intent.action.SEND_MULTIPLE" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="image/*" />
             </intent-filter>

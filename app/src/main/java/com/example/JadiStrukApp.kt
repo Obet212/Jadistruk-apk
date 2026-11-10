@@ -7,15 +7,15 @@ import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
 
 /**
- * Application class untuk OBETSTRUK v2.0.
+ * Application class untuk JADISTRUK v2.0.
  * Bertanggung jawab menginisialisasi Firebase secara aman saat aplikasi pertama kali dijalankan,
  * mencegah inisialisasi ganda, dan memastikan aplikasi tetap dapat berjalan secara offline
  * jika inisialisasi Firebase gagal.
  */
-class ObetStrukApp : Application() {
+class JadiStrukApp : Application() {
 
   companion object {
-    private const val TAG = "ObetStrukApp"
+    private const val TAG = "JadiStrukApp"
 
     // Kredensial proyek Firebase jadistruk (dari google-services.json) untuk fallback jika ContentProvider belum berjalan
     private const val FIREBASE_APP_ID = "1:718386140735:android:50e7374fcfd2387e5c4a8a"
@@ -82,9 +82,9 @@ class ObetStrukApp : Application() {
     super.onCreate()
     try {
       val initialized = ensureFirebaseInitialized(this)
-      Log.d(TAG, "Inisialisasi awal ObetStrukApp selesai. Firebase aktif: $initialized")
+      Log.d(TAG, "Inisialisasi awal JadiStrukApp selesai. Firebase aktif: $initialized")
     } catch (e: Exception) {
-      Log.e(TAG, "Error tidak terduga saat inisialisasi ObetStrukApp: ${e.message}", e)
+      Log.e(TAG, "Error tidak terduga saat inisialisasi JadiStrukApp: ${e.message}", e)
     }
   }
 }

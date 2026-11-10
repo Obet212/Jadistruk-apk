@@ -26,7 +26,7 @@ import java.util.Locale
 import java.util.UUID
 
 /**
- * Metadata informasi file backup OBETSTRUK.
+ * Metadata informasi file backup JadiStruk.
  */
 data class BackupMetadata(
   val format: String = BackupManager.FORMAT_NAME,
@@ -55,7 +55,7 @@ data class BackupTemplateItem(
 )
 
 /**
- * Paket data lengkap backup OBETSTRUK.
+ * Paket data lengkap backup JadiStruk.
  */
 data class BackupPackage(
   val metadata: BackupMetadata,
@@ -65,7 +65,7 @@ data class BackupPackage(
 )
 
 /**
- * Pengelola pembuatan, penyimpanan, pembagian, validasi, dan pemulihan data backup (.obetstruk).
+ * Pengelola pembuatan, penyimpanan, pembagian, validasi, dan pemulihan data backup (.jadistruk).
  * 100% Offline, aman, dan kompatibel lintas perangkat.
  */
 class BackupManager(
@@ -76,9 +76,9 @@ class BackupManager(
 
   companion object {
     private const val TAG = "BackupManager"
-    const val FORMAT_NAME = "OBETSTRUK_BACKUP"
+    const val FORMAT_NAME = "JADISTRUK_BACKUP"
     const val BACKUP_VERSION = 1
-    const val FILE_EXTENSION = ".obetstruk"
+    const val FILE_EXTENSION = ".jadistruk"
   }
 
   /**
@@ -194,7 +194,7 @@ class BackupManager(
   }
 
   /**
-   * Membuat file lokal ".obetstruk" sementara di cache untuk dibagikan melalui Share Sheet.
+   * Membuat file lokal ".jadistruk" sementara di cache untuk dibagikan melalui Share Sheet.
    */
   suspend fun createCacheBackupFile(payloadJson: String): File = withContext(Dispatchers.IO) {
     val backupDir = File(context.cacheDir, "backups").apply { mkdirs() }
@@ -207,7 +207,7 @@ class BackupManager(
     }
 
     val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-    val backupFile = File(backupDir, "backup_obetstruk_$timestamp$FILE_EXTENSION")
+    val backupFile = File(backupDir, "backup_jadistruk_$timestamp$FILE_EXTENSION")
     backupFile.writeText(payloadJson, Charsets.UTF_8)
     backupFile
   }
@@ -223,7 +223,7 @@ class BackupManager(
   }
 
   /**
-   * Membuka Android Share Sheet untuk berbagi file ".obetstruk" ke WhatsApp, Bluetooth, Telegram, dll.
+   * Membuka Android Share Sheet untuk berbagi file ".jadistruk" ke WhatsApp, Bluetooth, Telegram, dll.
    */
   fun shareBackupFile(backupFile: File) {
     try {
@@ -236,12 +236,12 @@ class BackupManager(
       val shareIntent = Intent(Intent.ACTION_SEND).apply {
         type = "application/octet-stream"
         putExtra(Intent.EXTRA_STREAM, fileUri)
-        putExtra(Intent.EXTRA_SUBJECT, "Backup OBETSTRUK - ${backupFile.name}")
-        putExtra(Intent.EXTRA_TEXT, "File backup konfigurasi dan template aplikasi OBETSTRUK.")
+        putExtra(Intent.EXTRA_SUBJECT, "Backup JadiStruk - ${backupFile.name}")
+        putExtra(Intent.EXTRA_TEXT, "File backup konfigurasi dan template aplikasi JadiStruk.")
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
       }
 
-      val chooser = Intent.createChooser(shareIntent, "Bagikan File Backup OBETSTRUK").apply {
+      val chooser = Intent.createChooser(shareIntent, "Bagikan File Backup JadiStruk").apply {
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
       }
       context.startActivity(chooser)
@@ -268,7 +268,7 @@ class BackupManager(
     }
 
     val restoredSettings = PrintSettings(
-      storeName = settingsObj.optString("storeName", "OBETSTRUK POS"),
+      storeName = settingsObj.optString("storeName", "JADISTRUK POS"),
       storeAddress = settingsObj.optString("storeAddress", ""),
       storePhone = settingsObj.optString("storePhone", ""),
       footerMessage = settingsObj.optString("footerMessage", "Terima kasih! Bukti transfer telah diverifikasi."),
@@ -331,8 +331,8 @@ class BackupManager(
   }
 
   /**
-   * Membaca dan memvalidasi file ".obetstruk" yang dipilih pengguna sebelum proses pemulihan.
-   * Menolak jika file rusak, tidak lengkap, atau bukan format resmi OBETSTRUK.
+   * Membaca dan memvalidasi file ".jadistruk" yang dipilih pengguna sebelum proses pemulihan.
+   * Menolak jika file rusak, tidak lengkap, atau bukan format resmi JadiStruk.
    */
   suspend fun validateAndParseBackup(sourceUri: Uri): Result<BackupPackage> = withContext(Dispatchers.IO) {
     try {
@@ -352,7 +352,7 @@ class BackupManager(
 
       val format = root.optString("format", "")
       if (format != FORMAT_NAME) {
-        return@withContext Result.failure(Exception("File ini bukan file backup resmi OBETSTRUK (format: $format)."))
+        return@withContext Result.failure(Exception("File ini bukan file backup resmi JadiStruk (format: $format)."))
       }
 
       val version = root.optInt("version", 0)

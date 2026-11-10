@@ -645,7 +645,7 @@ class BsiReceiptParser : SmartReceiptParser {
 
 /**
  * Parser umum / fallback cerdas jika bukti transfer bukan dari bank/e-wallet spesifik di atas.
- * Memanfaatkan MultiCategoryExtractor 7-kolom dan ReceiptParser bawaan OBETSTRUK.
+ * Memanfaatkan MultiCategoryExtractor 7-kolom dan ReceiptParser bawaan JADISTRUK.
  */
 class GenericSmartReceiptParser : SmartReceiptParser {
   override val source: TransactionSource = TransactionSource.GENERIC

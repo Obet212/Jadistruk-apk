@@ -161,11 +161,11 @@ fun ScanScreen(
         title = {
           Column {
             Text(
-              text = "ESA STRUK - Terima Share Bukti",
+              text = "Baca Bukti Transfer",
               style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
             )
             Text(
-              text = "Penerimaan Intent ACTION_SEND & OCR Presisi",
+              text = "Mesin OCR On-Device Google ML Kit",
               style = MaterialTheme.typography.bodySmall,
               color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -440,7 +440,7 @@ fun ScanScreen(
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
           ) {
             Column(modifier = Modifier.padding(18.dp)) {
-              // ESA STRUK SMART READER HEADER & SOURCE SELECTOR
+              // JADISTRUK SMART READER HEADER & SOURCE SELECTOR
               if (smartReaderResult != null) {
                 Card(
                   modifier = Modifier
@@ -472,7 +472,7 @@ fun ScanScreen(
                           )
                         }
                         Text(
-                          text = "ESA STRUK Smart Reader",
+                          text = "JADISTRUK Smart Reader",
                           style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                           color = MaterialTheme.colorScheme.onSurface
                         )
@@ -1368,6 +1368,48 @@ fun ScanScreen(
                           }
                         },
                         modifier = Modifier.fillMaxWidth().testTag("input_sender_account"),
+                        singleLine = true,
+                        shape = RoundedCornerShape(10.dp)
+                      )
+
+                      // Metode Pembayaran
+                      OutlinedTextField(
+                        value = currentReceipt.paymentMethod,
+                        onValueChange = { onUpdateReceipt(currentReceipt.copy(paymentMethod = it)) },
+                        label = { Text("Metode Pembayaran") },
+                        leadingIcon = { Icon(Icons.Filled.Payments, contentDescription = null) },
+                        trailingIcon = {
+                          if (currentReceipt.paymentMethod.isNotBlank()) {
+                            IconButton(onClick = {
+                              clipboardManager.setText(AnnotatedString(currentReceipt.paymentMethod))
+                              Toast.makeText(context, "Metode Pembayaran disalin", Toast.LENGTH_SHORT).show()
+                            }) {
+                              Icon(Icons.Filled.ContentCopy, contentDescription = "Salin", modifier = Modifier.size(18.dp))
+                            }
+                          }
+                        },
+                        modifier = Modifier.fillMaxWidth().testTag("input_payment_method"),
+                        singleLine = true,
+                        shape = RoundedCornerShape(10.dp)
+                      )
+
+                      // ID Order Merchant
+                      OutlinedTextField(
+                        value = currentReceipt.merchantOrderId,
+                        onValueChange = { onUpdateReceipt(currentReceipt.copy(merchantOrderId = it)) },
+                        label = { Text("ID Order Merchant") },
+                        leadingIcon = { Icon(Icons.Filled.Tag, contentDescription = null) },
+                        trailingIcon = {
+                          if (currentReceipt.merchantOrderId.isNotBlank()) {
+                            IconButton(onClick = {
+                              clipboardManager.setText(AnnotatedString(currentReceipt.merchantOrderId))
+                              Toast.makeText(context, "ID Order Merchant disalin", Toast.LENGTH_SHORT).show()
+                            }) {
+                              Icon(Icons.Filled.ContentCopy, contentDescription = "Salin", modifier = Modifier.size(18.dp))
+                            }
+                          }
+                        },
+                        modifier = Modifier.fillMaxWidth().testTag("input_merchant_order_id"),
                         singleLine = true,
                         shape = RoundedCornerShape(10.dp)
                       )

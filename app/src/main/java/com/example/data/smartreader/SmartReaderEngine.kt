@@ -3,7 +3,7 @@ package com.example.data.smartreader
 import com.example.data.model.OcrResult
 
 /**
- * Mesin utama OBETSTRUK SMART READER.
+ * Mesin utama JADISTRUK SMART READER.
  * Mengoordinasikan deteksi otomatis sumber transaksi, pemilihan parser khusus per aplikasi,
  * eksekusi ekstraksi modular offline, dan validasi silang data.
  */
@@ -110,6 +110,8 @@ object SmartReaderEngine {
       refNumber = finalRef,
       transactionType = finalType,
       transactionStatus = finalStatus,
+      paymentMethod = parsedResult.paymentMethod,
+      merchantOrderId = parsedResult.merchantOrderId,
       notes = finalNotes,
       amount = finalAmount,
       adminFee = finalAdmin,

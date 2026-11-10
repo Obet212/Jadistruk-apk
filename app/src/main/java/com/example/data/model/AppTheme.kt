@@ -3,7 +3,7 @@ package com.example.data.model
 import androidx.compose.ui.graphics.Color
 
 /**
- * Pilihan tema antarmuka (UI Theme) aplikasi OBETSTRUK.
+ * Pilihan tema antarmuka (UI Theme) aplikasi JADISTRUK.
  * Mengubah palet warna, latar belakang, kartu, tombol, teks, dan aksen visual
  * secara menyeluruh di seluruh aplikasi secara konsisten dan real-time.
  */

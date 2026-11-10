@@ -200,7 +200,7 @@ fun SettingsScreen(
         title = {
           Column {
             Text(
-              text = "Pengaturan ESA STRUK",
+              text = "Pengaturan JADISTRUK",
               style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
             )
             Text(
@@ -883,7 +883,7 @@ fun SettingsScreen(
         }
       }
 
-      // 7. Backup & Pemulihan Data (.obetstruk)
+      // 7. Backup & Pemulihan Data (.jadistruk)
       item {
         Card(
           modifier = Modifier
@@ -919,7 +919,7 @@ fun SettingsScreen(
                   color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                  text = "Ekspor & impor seluruh konfigurasi (.obetstruk)",
+                  text = "Ekspor & impor seluruh konfigurasi (.jadistruk)",
                   style = MaterialTheme.typography.bodySmall,
                   color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -938,7 +938,7 @@ fun SettingsScreen(
                 verticalArrangement = Arrangement.spacedBy(4.dp)
               ) {
                 Text(
-                  text = "Simpan seluruh template struk (termasuk gambar screenshot), identitas toko, tema, dan preferensi printer ke dalam satu file .obetstruk untuk dicadangkan atau dipulihkan ke HP baru.",
+                  text = "Simpan seluruh template struk (termasuk gambar screenshot), identitas toko, tema, dan preferensi printer ke dalam satu file .jadistruk untuk dicadangkan atau dipulihkan ke HP baru.",
                   style = MaterialTheme.typography.bodySmall,
                   color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -1703,7 +1703,7 @@ fun SettingsScreen(
       text = {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
           Text(
-            text = "Seluruh data pengaturan, identitas toko, tema, dan template struk (termasuk gambar) telah dikemas ke file .obetstruk:",
+            text = "Seluruh data pengaturan, identitas toko, tema, dan template struk (termasuk gambar) telah dikemas ke file .jadistruk:",
             style = MaterialTheme.typography.bodySmall
           )
           Surface(
@@ -1712,7 +1712,7 @@ fun SettingsScreen(
             modifier = Modifier.fillMaxWidth()
           ) {
             Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-              Text("• Berkas: .obetstruk (Versi ${pkg.metadata.version})", style = MaterialTheme.typography.bodySmall)
+              Text("• Berkas: .jadistruk (Versi ${pkg.metadata.version})", style = MaterialTheme.typography.bodySmall)
               Text("• Toko: ${pkg.metadata.storeName}", style = MaterialTheme.typography.bodySmall)
               Text("• Template: ${pkg.metadata.templateCount} template (lengkap dengan data area & gambar)", style = MaterialTheme.typography.bodySmall)
               Text("• Tanggal: ${pkg.metadata.formattedDate}", style = MaterialTheme.typography.bodySmall)
@@ -1737,7 +1737,7 @@ fun SettingsScreen(
           OutlinedButton(
             onClick = {
               val timestamp = java.text.SimpleDateFormat("yyyyMMdd_HHmm", java.util.Locale.getDefault()).format(java.util.Date())
-              saveDocLauncher.launch("backup_obetstruk_$timestamp.obetstruk")
+              saveDocLauncher.launch("backup_jadistruk_$timestamp.jadistruk")
             },
             modifier = Modifier.weight(1f),
             shape = RoundedCornerShape(8.dp)
@@ -1785,7 +1785,7 @@ fun SettingsScreen(
       text = {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
           Text(
-            text = "Ditemukan file backup resmi ESA STRUK yang valid:",
+            text = "Ditemukan file backup resmi JadiStruk yang valid:",
             style = MaterialTheme.typography.bodySmall
           )
           Surface(

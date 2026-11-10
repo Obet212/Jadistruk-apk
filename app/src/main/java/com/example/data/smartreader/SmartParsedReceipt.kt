@@ -7,7 +7,7 @@ import java.text.NumberFormat
 import java.util.Locale
 
 /**
- * Representasi data hasil ekstraksi otomatis OBETSTRUK SMART READER.
+ * Representasi data hasil ekstraksi otomatis JADISTRUK SMART READER.
  * Menyimpan seluruh kategori transaksi, metadata sumber aplikasi/bank,
  * daftar peringatan, serta field yang memerlukan pemeriksaan pengguna.
  */
@@ -26,6 +26,8 @@ data class SmartParsedReceipt(
   val refNumber: String = "",
   val transactionType: String = "Transfer Bank",
   val transactionStatus: String = "Berhasil",
+  val paymentMethod: String = "",
+  val merchantOrderId: String = "",
   val notes: String = "",
   val confidenceScore: Int = 85,
   val detectedFields: Set<TargetRecipientField> = emptySet(),
@@ -81,7 +83,7 @@ data class SmartParsedReceipt(
   }
 
   /**
-   * Konversi hasil smart reading ke entitas Receipt bawaan OBETSTRUK
+   * Konversi hasil smart reading ke entitas Receipt bawaan JADISTRUK
    * agar dapat langsung disimpan ke database Room, dicetak via Bluetooth ESC/POS,
    * atau diedit di Thermal Receipt Preview.
    */
@@ -105,7 +107,9 @@ data class SmartParsedReceipt(
       senderAccount = senderAccount,
       sourceApp = source.displayName,
       transactionType = transactionType,
-      transactionStatus = transactionStatus
+      transactionStatus = transactionStatus,
+      paymentMethod = paymentMethod,
+      merchantOrderId = merchantOrderId
     )
   }
 }

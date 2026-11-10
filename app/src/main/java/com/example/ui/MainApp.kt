@@ -138,9 +138,6 @@ fun MainApp(
             onNavigateToHistory = {
               currentScreen = Screen.History
             },
-            onNavigateToTemplates = {
-              currentScreen = Screen.Templates
-            },
             onReceiptClicked = { receipt ->
               viewModel.selectReceiptForDetail(receipt)
               previousScreen = Screen.Home
@@ -246,7 +243,6 @@ fun MainApp(
           ReceiptDetailScreen(
             receipt = currentReceipt,
             settings = settings,
-            onUpdateReceipt = { updated -> viewModel.updateCurrentReceipt(updated) },
             onBack = {
               currentScreen = previousScreen
             },

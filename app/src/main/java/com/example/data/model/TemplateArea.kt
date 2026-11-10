@@ -5,7 +5,7 @@ import org.json.JSONObject
 import java.util.UUID
 
 /**
- * 7 Target fields defined for OBETSTRUK recipient transfers:
+ * 7 Target fields defined for JADISTRUK recipient transfers:
  * 1. WAKTU
  * 2. BANK
  * 3. REKENING

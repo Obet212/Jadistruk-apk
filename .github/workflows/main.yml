@@ -1,11 +1,13 @@
-name: Build ESA STRUK APK
+name: Build Android APK
 on:
   push:
     branches: [ "main", "master" ]
     tags:
-      - "v*"
+      - 'v*'
+
 permissions:
   contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -14,8 +16,8 @@ jobs:
     - name: Set up JDK 17
       uses: actions/setup-java@v4
       with:
-        java-version: "17"
-        distribution: "temurin"
+        java-version: '17'
+        distribution: 'temurin'
     - name: Grant Execute Permission
       run: chmod +x ./gradlew
     - name: Restore Original Debug Keystore
@@ -28,30 +30,20 @@ jobs:
     - name: Build APK
       run: ./gradlew assembleDebug
     - name: Copy Named APK
-      run: |
-        cp app/build/outputs/apk/debug/app-debug.apk ESASTRUK-2.0.apk
+      run: cp app/build/outputs/apk/debug/app-debug.apk JadiStruk-2.2.apk
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: ESASTRUK-APK
-        path: ESASTRUK-2.0.apk
+        name: JadiStruk-APK
+        path: JadiStruk-2.2.apk
     - name: Publish to GitHub Release
       uses: softprops/action-gh-release@v2
       with:
-        tag_name: v2.0
-        name: ESA STRUK v2.0
+        tag_name: v2.2
+        name: JADISTRUK v2.2
         draft: false
         prerelease: false
-        files: ESASTRUK-2.0.apk
-        body: |
-          Rilis Terbaru ESA STRUK v2.0 - Aplikasi Cetak Struk Digital & Bukti Transfer
-          
-          Fitur Utama:
-          - Rebranding & Pembaruan Sistem: ESA STRUK v2.0
-          - Terima bagikan (Share) gambar bukti transfer dari semua bank (BCA, BRI, Mandiri, BNI, Dana, GoPay, QRIS)
-          - Ekstraksi OCR pintar dengan koordinat presisi tinggi
-          - Cetak Struk ke Printer Thermal Bluetooth ESC/POS (58mm dan 80mm)
-          - Editor struk langsung: ubah nominal, nama toko, tanggal, dan catatan
-          - Pratinjau cetak digital yang rapi dan terukur
+        files: JadiStruk-2.2.apk
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
