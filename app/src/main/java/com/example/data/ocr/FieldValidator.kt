@@ -218,7 +218,7 @@ object FieldValidator {
    * - Menolak nomor rekening, nomor telepon, nominal transfer, tanggal, atau waktu.
    * - Jika tidak memenuhi aturan, kembalikan teks kosong (jangan menebak/melengkapi).
    */
-  fun sanitizeRefNumber(raw: String, candidateAccount: String = ""): Pair<String, String?> {
+  fun sanitizeRefNumber(raw: String, candidateAccount: String = "", minDigits: Int = 16): Pair<String, String?> {
     val trimmed = raw.trim()
     if (trimmed.isBlank()) {
       return Pair("", "Nomor referensi belum terisi")
@@ -254,9 +254,9 @@ object FieldValidator {
       return Pair("", "Kode referensi tidak valid: hanya menerima karakter angka 0–9 tanpa huruf atau simbol.")
     }
 
-    // ATURAN FORMAT 3: Panjang wajib lebih dari 15 digit atau minimal 16 digit
-    if (cleaned.length < 16) {
-      return Pair("", "Panjang kode referensi harus minimal 16 digit (terbaca ${cleaned.length} digit).")
+    // ATURAN FORMAT 3: Validasi panjang digit sesuai parameter minDigits (default 16 digit, khusus Qita atau referensi resmi bisa >= 8 digit)
+    if (cleaned.length < minDigits) {
+      return Pair("", "Panjang kode referensi harus minimal $minDigits digit (terbaca ${cleaned.length} digit).")
     }
 
     // PENCEGAHAN 1: Jangan mengambil nomor rekening sebagai referensi
@@ -501,7 +501,9 @@ object FieldValidator {
     }
 
     // 3. REFERENSI
-    val (refClean, refIssue) = sanitizeRefNumber(receipt.refNumber, receipt.recipientAccount)
+    val isQita = receipt.sourceApp.contains("Qita", ignoreCase = true) || receipt.transactionType.contains("Bank BRI", ignoreCase = true)
+    val minRefDigits = if (isQita) 8 else 16
+    val (refClean, refIssue) = sanitizeRefNumber(receipt.refNumber, receipt.recipientAccount, minDigits = minRefDigits)
     if (receipt.refNumber.isBlank()) {
       warnings[TargetRecipientField.REFERENSI] = "Nomor referensi / SN belum terdeteksi."
     } else if (refClean.isBlank() && refIssue != null) {

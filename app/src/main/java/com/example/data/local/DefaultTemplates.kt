@@ -1,5 +1,9 @@
 package com.example.data.local
 
+import com.example.data.model.AreaConfigHelper
+import com.example.data.model.FieldBoundingArea
+import com.example.data.model.TargetRecipientField
+
 object DefaultTemplates {
   fun getDefaults(): List<TemplateEntity> {
     return listOf(
@@ -112,6 +116,28 @@ object DefaultTemplates {
         accountPattern = "no\\.?\\s*rekening|nomor\\s*hp",
         amountPattern = "nominal|jumlah\\s*transfer|total",
         isBuiltIn = true,
+      ),
+      TemplateEntity(
+        id = 12,
+        bankName = "BRI (Qita by BRI)",
+        category = "Bank Transfer",
+        detectionKeywords = "Qita, Qita by BRI, Transfer Bank BRI, Bank Rakyat Indonesia",
+        recipientPattern = "prospek\\s*mitra\\s*abadi|nama\\s*penerima|penerima|tujuan",
+        accountPattern = "0251\\s*0133\\s*3333\\s*301|nomor\\s*rekening|no\\.?\\s*rek",
+        amountPattern = "nominal|rp299|jumlah",
+        isBuiltIn = true,
+        areaConfigJson = AreaConfigHelper.toJson(
+          listOf(
+            FieldBoundingArea(field = TargetRecipientField.TANGGAL, normLeft = 0.05f, normTop = 0.315f, normRight = 0.95f, normBottom = 0.355f),
+            FieldBoundingArea(field = TargetRecipientField.WAKTU, normLeft = 0.05f, normTop = 0.315f, normRight = 0.95f, normBottom = 0.355f),
+            FieldBoundingArea(field = TargetRecipientField.PENERIMA, normLeft = 0.15f, normTop = 0.470f, normRight = 0.90f, normBottom = 0.510f),
+            FieldBoundingArea(field = TargetRecipientField.BANK, normLeft = 0.15f, normTop = 0.502f, normRight = 0.90f, normBottom = 0.542f),
+            FieldBoundingArea(field = TargetRecipientField.REKENING, normLeft = 0.15f, normTop = 0.502f, normRight = 0.90f, normBottom = 0.542f),
+            FieldBoundingArea(field = TargetRecipientField.REFERENSI, normLeft = 0.48f, normTop = 0.550f, normRight = 0.96f, normBottom = 0.595f),
+            FieldBoundingArea(field = TargetRecipientField.NOMINAL, normLeft = 0.10f, normTop = 0.270f, normRight = 0.90f, normBottom = 0.325f),
+            FieldBoundingArea(field = TargetRecipientField.ADMIN, normLeft = 0.48f, normTop = 0.720f, normRight = 0.96f, normBottom = 0.765f),
+          )
+        ),
       ),
     )
   }

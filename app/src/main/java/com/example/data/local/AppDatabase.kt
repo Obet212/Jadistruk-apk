@@ -44,6 +44,12 @@ abstract class AppDatabase : RoomDatabase() {
               INSTANCE?.templateDao()?.insertTemplates(DefaultTemplates.getDefaults())
             }
           }
+          override fun onOpen(db: SupportSQLiteDatabase) {
+            super.onOpen(db)
+            scope.launch(Dispatchers.IO) {
+              INSTANCE?.templateDao()?.insertTemplates(DefaultTemplates.getDefaults())
+            }
+          }
         })
         .fallbackToDestructiveMigration(true)
         .build()

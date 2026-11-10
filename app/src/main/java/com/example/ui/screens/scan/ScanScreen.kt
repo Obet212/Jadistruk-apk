@@ -48,6 +48,8 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.Person
@@ -131,6 +133,7 @@ fun ScanScreen(
   var showOriginalImageDialog by remember { mutableStateOf(false) }
   var showValidationDialog by remember { mutableStateOf(false) }
   var selectedTemplateId by remember { mutableStateOf<Long?>(null) }
+  var showSenderAndTransactionDetails by remember { mutableStateOf(true) }
 
   val validationReport = remember(currentReceipt) {
     FieldValidator.validateReceipt(currentReceipt)
@@ -1216,6 +1219,171 @@ fun ScanScreen(
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.onSecondaryContainer
                   )
+                }
+              }
+
+              // DETAIL TRANSAKSI & PENGIRIM (Status, Jenis Transaksi, Pengirim, Catatan)
+              Card(
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .padding(top = 12.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(
+                  containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                ),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+              ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                  Row(
+                    modifier = Modifier
+                      .fillMaxWidth()
+                      .clickable { showSenderAndTransactionDetails = !showSenderAndTransactionDetails },
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                  ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                      Icon(
+                        Icons.Filled.Info,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(18.dp)
+                      )
+                      Spacer(modifier = Modifier.width(8.dp))
+                      Text(
+                        text = "Detail Transaksi & Pengirim",
+                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onSurface
+                      )
+                    }
+                    IconButton(
+                      onClick = { showSenderAndTransactionDetails = !showSenderAndTransactionDetails },
+                      modifier = Modifier.size(28.dp)
+                    ) {
+                      Icon(
+                        if (showSenderAndTransactionDetails) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                      )
+                    }
+                  }
+
+                  AnimatedVisibility(visible = showSenderAndTransactionDetails) {
+                    Column(
+                      modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                      verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                      // Status Transaksi
+                      OutlinedTextField(
+                        value = currentReceipt.transactionStatus,
+                        onValueChange = { onUpdateReceipt(currentReceipt.copy(transactionStatus = it)) },
+                        label = { Text("Status Transaksi") },
+                        leadingIcon = { Icon(Icons.Filled.CheckCircle, contentDescription = null) },
+                        trailingIcon = {
+                          if (currentReceipt.transactionStatus.isNotBlank()) {
+                            IconButton(onClick = {
+                              clipboardManager.setText(AnnotatedString(currentReceipt.transactionStatus))
+                              Toast.makeText(context, "Status Transaksi disalin", Toast.LENGTH_SHORT).show()
+                            }) {
+                              Icon(Icons.Filled.ContentCopy, contentDescription = "Salin", modifier = Modifier.size(18.dp))
+                            }
+                          }
+                        },
+                        modifier = Modifier.fillMaxWidth().testTag("input_transaction_status"),
+                        singleLine = true,
+                        shape = RoundedCornerShape(10.dp)
+                      )
+
+                      // Jenis Transaksi
+                      OutlinedTextField(
+                        value = currentReceipt.transactionType,
+                        onValueChange = { onUpdateReceipt(currentReceipt.copy(transactionType = it)) },
+                        label = { Text("Jenis Transaksi") },
+                        leadingIcon = { Icon(Icons.Filled.Receipt, contentDescription = null) },
+                        trailingIcon = {
+                          if (currentReceipt.transactionType.isNotBlank()) {
+                            IconButton(onClick = {
+                              clipboardManager.setText(AnnotatedString(currentReceipt.transactionType))
+                              Toast.makeText(context, "Jenis Transaksi disalin", Toast.LENGTH_SHORT).show()
+                            }) {
+                              Icon(Icons.Filled.ContentCopy, contentDescription = "Salin", modifier = Modifier.size(18.dp))
+                            }
+                          }
+                        },
+                        modifier = Modifier.fillMaxWidth().testTag("input_transaction_type"),
+                        singleLine = true,
+                        shape = RoundedCornerShape(10.dp)
+                      )
+
+                      // Nama Pengirim
+                      OutlinedTextField(
+                        value = currentReceipt.senderName,
+                        onValueChange = { onUpdateReceipt(currentReceipt.copy(senderName = it)) },
+                        label = { Text("Nama Pengirim") },
+                        leadingIcon = { Icon(Icons.Filled.Person, contentDescription = null) },
+                        trailingIcon = {
+                          if (currentReceipt.senderName.isNotBlank()) {
+                            IconButton(onClick = {
+                              clipboardManager.setText(AnnotatedString(currentReceipt.senderName))
+                              Toast.makeText(context, "Nama Pengirim disalin", Toast.LENGTH_SHORT).show()
+                            }) {
+                              Icon(Icons.Filled.ContentCopy, contentDescription = "Salin", modifier = Modifier.size(18.dp))
+                            }
+                          }
+                        },
+                        modifier = Modifier.fillMaxWidth().testTag("input_sender_name"),
+                        singleLine = true,
+                        shape = RoundedCornerShape(10.dp)
+                      )
+
+                      // Bank & Rekening Pengirim
+                      val senderAccDisplay = when {
+                        currentReceipt.senderBank.isNotBlank() && currentReceipt.senderAccount.isNotBlank() ->
+                          "${currentReceipt.senderBank} - ${currentReceipt.senderAccount}"
+                        currentReceipt.senderBank.isNotBlank() -> currentReceipt.senderBank
+                        currentReceipt.senderAccount.isNotBlank() -> currentReceipt.senderAccount
+                        else -> ""
+                      }
+                      OutlinedTextField(
+                        value = senderAccDisplay,
+                        onValueChange = { input ->
+                          val parts = input.split("-")
+                          if (parts.size >= 2) {
+                            onUpdateReceipt(currentReceipt.copy(senderBank = parts[0].trim(), senderAccount = parts.drop(1).joinToString("-").trim()))
+                          } else {
+                            onUpdateReceipt(currentReceipt.copy(senderAccount = input.trim()))
+                          }
+                        },
+                        label = { Text("Bank & Rekening Pengirim") },
+                        leadingIcon = { Icon(Icons.Filled.CreditCard, contentDescription = null) },
+                        trailingIcon = {
+                          if (senderAccDisplay.isNotBlank()) {
+                            IconButton(onClick = {
+                              clipboardManager.setText(AnnotatedString(senderAccDisplay))
+                              Toast.makeText(context, "Rekening Pengirim disalin", Toast.LENGTH_SHORT).show()
+                            }) {
+                              Icon(Icons.Filled.ContentCopy, contentDescription = "Salin", modifier = Modifier.size(18.dp))
+                            }
+                          }
+                        },
+                        modifier = Modifier.fillMaxWidth().testTag("input_sender_account"),
+                        singleLine = true,
+                        shape = RoundedCornerShape(10.dp)
+                      )
+
+                      // Catatan
+                      OutlinedTextField(
+                        value = currentReceipt.notes,
+                        onValueChange = { onUpdateReceipt(currentReceipt.copy(notes = it)) },
+                        label = { Text("Catatan / Keterangan") },
+                        leadingIcon = { Icon(Icons.Filled.EditNote, contentDescription = null) },
+                        modifier = Modifier.fillMaxWidth().testTag("input_notes"),
+                        singleLine = true,
+                        shape = RoundedCornerShape(10.dp)
+                      )
+                    }
+                  }
                 }
               }
 

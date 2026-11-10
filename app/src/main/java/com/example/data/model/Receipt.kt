@@ -29,6 +29,8 @@ data class Receipt(
   val reviewFlags: List<String> = emptyList(),
   // Field tambahan JADISTRUK SMART READER
   val senderName: String = "",
+  val senderBank: String = "",
+  val senderAccount: String = "",
   val sourceApp: String = "",
   val transactionType: String = "Transfer Bank",
   val transactionStatus: String = "Berhasil",

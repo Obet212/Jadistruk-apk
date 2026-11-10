@@ -155,7 +155,11 @@ class ReceiptViewModel(application: Application) : AndroidViewModel(application)
         _smartReaderResult.value = smartParsed
 
         val parsed = withContext(Dispatchers.Default) {
-          ReceiptParser.parseOcrResult(ocrResult, templates)
+          if (smartParsed.source != com.example.data.smartreader.TransactionSource.GENERIC) {
+            smartParsed.toReceipt(receiptId = _currentReceipt.value.id).copy(ocrResult = ocrResult)
+          } else {
+            ReceiptParser.parseOcrResult(ocrResult, templates)
+          }
         }
 
         val finalReceipt = if (settings.value.autoApplyAdminFee && parsed.amount > 0L) {

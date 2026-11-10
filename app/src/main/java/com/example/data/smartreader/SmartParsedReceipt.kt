@@ -14,6 +14,8 @@ import java.util.Locale
 data class SmartParsedReceipt(
   val source: TransactionSource = TransactionSource.GENERIC,
   val senderName: String = "",
+  val senderBank: String = "",
+  val senderAccount: String = "",
   val recipientName: String = "",
   val recipientBank: String = "",
   val recipientAccount: String = "",
@@ -99,6 +101,8 @@ data class SmartParsedReceipt(
       ocrResult = ocrResult,
       reviewFlags = (missingFields + reviewWarnings).distinct(),
       senderName = senderName,
+      senderBank = senderBank,
+      senderAccount = senderAccount,
       sourceApp = source.displayName,
       transactionType = transactionType,
       transactionStatus = transactionStatus

@@ -15,6 +15,7 @@ object SmartReaderEngine {
     TransactionSource.OVO to OvoReceiptParser(),
     TransactionSource.SHOPEEPAY to ShopeePayReceiptParser(),
     TransactionSource.BRIMO to BrimoReceiptParser(),
+    TransactionSource.BRI_QITA to BriQitaReceiptParser(),
     TransactionSource.BCA to BcaReceiptParser(),
     TransactionSource.LIVIN to LivinReceiptParser(),
     TransactionSource.BNI to BniReceiptParser(),
@@ -66,6 +67,21 @@ object SmartReaderEngine {
     val finalBank = parsedResult.recipientBank.ifBlank { genericFallback.recipientBank }
     val finalAccount = parsedResult.recipientAccount.ifBlank { genericFallback.recipientAccount }
     val finalRecipient = parsedResult.recipientName.ifBlank { genericFallback.recipientName }
+    val finalSender = parsedResult.senderName.ifBlank { genericFallback.senderName }
+    val finalSenderBank = parsedResult.senderBank
+    val finalSenderAccount = parsedResult.senderAccount
+    val finalType = parsedResult.transactionType.ifBlank { genericFallback.transactionType }
+    val finalStatus = if (targetSource != TransactionSource.GENERIC && parsedResult.transactionStatus.isNotBlank()) {
+      parsedResult.transactionStatus
+    } else {
+      parsedResult.transactionStatus.ifBlank { genericFallback.transactionStatus }
+    }
+    val finalNotes = if (targetSource != TransactionSource.GENERIC) {
+      parsedResult.notes
+    } else {
+      val gen = genericFallback.notes.trim()
+      if (gen == "-") "" else gen
+    }
 
     // Evaluasi field yang belum lengkap
     val missingList = mutableListOf<String>()
@@ -74,15 +90,27 @@ object SmartReaderEngine {
     if (finalAccount.isBlank()) missingList.add("Nomor rekening / No. HP")
     if (finalAmount == 0L) missingList.add("Nominal transaksi")
     if (finalDate.isBlank()) missingList.add("Tanggal transaksi")
-    if (finalRef.isBlank()) missingList.add("Nomor referensi (min 16 digit)")
+    if (finalRef.isBlank()) {
+      if (targetSource == TransactionSource.BRI_QITA) {
+        missingList.add("Nomor referensi Qita")
+      } else {
+        missingList.add("Nomor referensi (min 16 digit)")
+      }
+    }
 
     val warnings = (parsedResult.reviewWarnings + genericFallback.reviewWarnings).distinct()
 
     return parsedResult.copy(
       source = targetSource,
+      senderName = finalSender,
+      senderBank = finalSenderBank,
+      senderAccount = finalSenderAccount,
       transactionDate = finalDate,
       transactionTime = finalTime,
       refNumber = finalRef,
+      transactionType = finalType,
+      transactionStatus = finalStatus,
+      notes = finalNotes,
       amount = finalAmount,
       adminFee = finalAdmin,
       recipientBank = finalBank,

@@ -46,6 +46,13 @@ enum class TransactionSource(
     primaryColorHex = 0xFF00529C,
     defaultTransactionType = "Transfer Antar Bank"
   ),
+  BRI_QITA(
+    id = "bri_qita",
+    displayName = "BRI Qita (Bank BRI)",
+    category = "Bank",
+    primaryColorHex = 0xFF00529C,
+    defaultTransactionType = "Transfer Bank BRI"
+  ),
   BCA(
     id = "bca",
     displayName = "BCA Mobile / myBCA",

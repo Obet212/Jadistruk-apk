@@ -65,12 +65,26 @@ object SourceDetector {
 
     // 5. BRImo / Bank BRI
     if (normalized.contains("brimo")) addScore(TransactionSource.BRIMO, 55, "BRImo Header")
-    if (normalized.contains("bank rakyat indonesia")) addScore(TransactionSource.BRIMO, 45, "Bank Rakyat Indonesia")
-    if (Regex("\\bbri\\b").containsMatchIn(normalized) && (normalized.contains("sumber dana") || normalized.contains("nomor referensi"))) {
+    if (normalized.contains("bank rakyat indonesia") && !normalized.contains("qita")) addScore(TransactionSource.BRIMO, 45, "Bank Rakyat Indonesia")
+    if (Regex("\\bbri\\b").containsMatchIn(normalized) && (normalized.contains("sumber dana") || normalized.contains("nomor referensi")) && !normalized.contains("qita")) {
       addScore(TransactionSource.BRIMO, 35, "BRI Struk Marker")
     }
     if (normalized.contains("sumber dana") && normalized.contains("tujuan transfer")) {
       addScore(TransactionSource.BRIMO, 25, "Format Transfer BRImo")
+    }
+
+    // 5b. BRI Qita (Qita by BRI)
+    if (normalized.contains("qita")) {
+      addScore(TransactionSource.BRI_QITA, 60, "Header Qita")
+      if (normalized.contains("bri") || normalized.contains("bank rakyat indonesia")) {
+        addScore(TransactionSource.BRI_QITA, 35, "Qita by BRI Header")
+      }
+    }
+    if (normalized.contains("transfer bank bri")) {
+      addScore(TransactionSource.BRI_QITA, 35, "Jenis Transaksi Transfer Bank BRI")
+    }
+    if (normalized.contains("01.001.608.7-093.000") || (normalized.contains("kantor pusat bri") && normalized.contains("qita"))) {
+      addScore(TransactionSource.BRI_QITA, 25, "Legal Footer Qita BRI")
     }
 
     // 6. BCA / myBCA / BCA Mobile
