@@ -27,7 +27,7 @@ data class Receipt(
   val ocrResult: OcrResult? = null,
   val candidateConflicts: Map<TargetRecipientField, List<String>> = emptyMap(),
   val reviewFlags: List<String> = emptyList(),
-  // Field tambahan JADISTRUK SMART READER
+  // Field tambahan OBETSTRUK SMART READER
   val senderName: String = "",
   val senderBank: String = "",
   val senderAccount: String = "",

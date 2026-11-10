@@ -208,7 +208,7 @@ object FieldValidator {
   // =========================================================================
 
   /**
-   * Validasi Kode Referensi / Nomor Transaksi (JADISTRUK v2.1):
+   * Validasi Kode Referensi / Nomor Transaksi (OBETSTRUK v2.1):
    * - Pengenalan label: Referensi, Reference, Ref, Nomor Transaksi, ID Transaksi, Transaction ID, Serial Number, SN, Kode Transaksi.
    * - Hanya menerima karakter angka 0–9.
    * - Panjang wajib minimal 16 digit (lebih dari 15 digit).

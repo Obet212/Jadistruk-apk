@@ -1,7 +1,7 @@
 package com.example.data.model
 
 /**
- * Pilihan tema template cetak struk JADISTRUK.
+ * Pilihan tema template cetak struk OBETSTRUK.
  * Mendukung 3 gaya desain: Sederhana, Profesional, dan Modern.
  */
 enum class ReceiptTheme(

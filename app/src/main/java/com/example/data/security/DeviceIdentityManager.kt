@@ -14,7 +14,7 @@ import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
 /**
- * Manages a unique, persistent hardware-backed Device ID for JADISTRUK.
+ * Manages a unique, persistent hardware-backed Device ID for OBETSTRUK.
  * 
  * Guarantees:
  * 1. Generated locally using UUID - never accesses IMEI, MAC, or restricted device identifiers.
@@ -32,7 +32,7 @@ class DeviceIdentityManager(private val context: Context) {
     private const val KEY_PLAIN_FALLBACK_ID = "plain_dev_id_fallback"
 
     private const val ANDROID_KEYSTORE = "AndroidKeyStore"
-    private const val KEYSTORE_ALIAS = "JadistrukDeviceKey"
+    private const val KEYSTORE_ALIAS = "ObetstrukDeviceKey"
     private const val TRANSFORMATION = "AES/GCM/NoPadding"
     private const val GCM_TAG_LENGTH = 128
   }

@@ -3,7 +3,7 @@ package com.example.data.smartreader
 import com.example.data.model.OcrResult
 
 /**
- * Mesin utama JADISTRUK SMART READER.
+ * Mesin utama OBETSTRUK SMART READER.
  * Mengoordinasikan deteksi otomatis sumber transaksi, pemilihan parser khusus per aplikasi,
  * eksekusi ekstraksi modular offline, dan validasi silang data.
  */

@@ -138,6 +138,9 @@ fun MainApp(
             onNavigateToHistory = {
               currentScreen = Screen.History
             },
+            onNavigateToTemplates = {
+              currentScreen = Screen.Templates
+            },
             onReceiptClicked = { receipt ->
               viewModel.selectReceiptForDetail(receipt)
               previousScreen = Screen.Home

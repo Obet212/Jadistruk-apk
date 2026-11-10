@@ -3,7 +3,7 @@ package com.example.data.remote
 import android.content.Context
 import android.util.Log
 import com.example.BuildConfig
-import com.example.JadiStrukApp
+import com.example.OBETSTRUKApp
 import com.google.firebase.Firebase
 import com.google.firebase.FirebaseApp
 import com.google.firebase.remoteconfig.FirebaseRemoteConfig
@@ -60,8 +60,8 @@ class RemoteConfigManager(private val context: Context) {
     private const val DEFAULT_MINIMUM_VERSION = "1.0"
     private const val DEFAULT_UPDATE_TITLE = "Pembaruan Aplikasi Tersedia"
     private const val DEFAULT_UPDATE_MESSAGE =
-      "Versi aplikasi Anda saat ini sudah tidak didukung. Silakan perbarui aplikasi JadiStruk ke versi terbaru untuk menikmati fitur dan stabilitas terbaik."
-    private const val DEFAULT_UPDATE_URL = "https://github.com/Obet212/Jadistruk-apk/releases"
+      "Versi aplikasi Anda saat ini sudah tidak didukung. Silakan perbarui aplikasi OBETSTRUK ke versi terbaru untuk menikmati fitur dan stabilitas terbaik."
+    private const val DEFAULT_UPDATE_URL = "https://github.com/Obet212/Obetstruk-apk/releases"
   }
 
   @Volatile
@@ -74,7 +74,7 @@ class RemoteConfigManager(private val context: Context) {
    */
   private fun getRemoteConfigInstance(): FirebaseRemoteConfig? {
     return try {
-      val isReady = JadiStrukApp.ensureFirebaseInitialized(context)
+      val isReady = OBETSTRUKApp.ensureFirebaseInitialized(context)
       if (!isReady || FirebaseApp.getApps(context).isEmpty()) {
         Log.w(TAG, "FirebaseApp belum tersedia, menunda akses Remote Config.")
         return null

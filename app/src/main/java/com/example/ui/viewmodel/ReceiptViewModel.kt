@@ -133,7 +133,7 @@ class ReceiptViewModel(application: Application) : AndroidViewModel(application)
   fun processImageUri(uri: Uri) {
     viewModelScope.launch {
       _currentImageUri.value = uri
-      _ocrState.value = OcrUiState.Processing("JADISTRUK Smart Reader: Membaca teks on-device...")
+      _ocrState.value = OcrUiState.Processing("OBETSTRUK Smart Reader: Membaca teks on-device...")
       try {
         val ocrResult = withContext(Dispatchers.IO) {
           textRecognizer.processImageUri(uri)

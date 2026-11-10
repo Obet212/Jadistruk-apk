@@ -22,7 +22,7 @@ class SettingsManager(context: Context) {
     val rules = AdminFeeRule.rulesFromJson(rulesJson)
 
     return PrintSettings(
-      storeName = prefs.getString("store_name", "JADISTRUK POS") ?: "JADISTRUK POS",
+      storeName = prefs.getString("store_name", "OBETSTRUK POS") ?: "OBETSTRUK POS",
       storeAddress = prefs.getString("store_address", "Layanan Cetak Struk Penerima") ?: "Layanan Cetak Struk Penerima",
       storePhone = prefs.getString("store_phone", "") ?: "",
       footerMessage = prefs.getString("footer_message", "Terima kasih! Bukti transfer telah diverifikasi.") ?: "Terima kasih! Bukti transfer telah diverifikasi.",

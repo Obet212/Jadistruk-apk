@@ -34,7 +34,7 @@ object ReceiptPdfAndPrintHelper {
         return
       }
 
-      val jobName = "Struk_JADISTRUK_${receipt.id}_${receipt.recipientBank.filter { it.isLetterOrDigit() }}"
+      val jobName = "Struk_OBETSTRUK_${receipt.id}_${receipt.recipientBank.filter { it.isLetterOrDigit() }}"
       val adapter = object : PrintDocumentAdapter() {
 
         override fun onLayout(

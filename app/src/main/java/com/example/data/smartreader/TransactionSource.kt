@@ -2,7 +2,7 @@ package com.example.data.smartreader
 
 /**
  * Daftar sumber aplikasi pembayaran dan mobile banking yang didukung
- * oleh JADISTRUK SMART READER.
+ * oleh OBETSTRUK SMART READER.
  */
 enum class TransactionSource(
   val id: String,

@@ -7,7 +7,7 @@ import java.text.NumberFormat
 import java.util.Locale
 
 /**
- * Representasi data hasil ekstraksi otomatis JADISTRUK SMART READER.
+ * Representasi data hasil ekstraksi otomatis OBETSTRUK SMART READER.
  * Menyimpan seluruh kategori transaksi, metadata sumber aplikasi/bank,
  * daftar peringatan, serta field yang memerlukan pemeriksaan pengguna.
  */
@@ -81,7 +81,7 @@ data class SmartParsedReceipt(
   }
 
   /**
-   * Konversi hasil smart reading ke entitas Receipt bawaan JADISTRUK
+   * Konversi hasil smart reading ke entitas Receipt bawaan OBETSTRUK
    * agar dapat langsung disimpan ke database Room, dicetak via Bluetooth ESC/POS,
    * atau diedit di Thermal Receipt Preview.
    */

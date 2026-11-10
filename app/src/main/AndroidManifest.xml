@@ -22,7 +22,7 @@
         android:required="false" />
 
     <application
-        android:name=".JadiStrukApp"
+        android:name=".ObetStrukApp"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -49,12 +49,12 @@
             </intent-filter>
 
             <!-- OBETSTRUK: Direct Share Receiver for Android Images -->
-            <intent-filter android:label="OBETSTRUK Smart Reader">
+            <intent-filter android:label="OBETSTRUK - Proses Bukti Transfer">
                 <action android:name="android.intent.action.SEND" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="image/*" />
             </intent-filter>
-            <intent-filter android:label="OBETSTRUK Smart Reader Multiple">
+            <intent-filter android:label="OBETSTRUK - Proses Bukti Multiple">
                 <action android:name="android.intent.action.SEND_MULTIPLE" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="image/*" />

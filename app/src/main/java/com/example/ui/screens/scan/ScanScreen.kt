@@ -161,11 +161,11 @@ fun ScanScreen(
         title = {
           Column {
             Text(
-              text = "Baca Bukti Transfer",
+              text = "OBETSTRUK - Terima Share Bukti",
               style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
             )
             Text(
-              text = "Mesin OCR On-Device Google ML Kit",
+              text = "Penerimaan Intent ACTION_SEND & OCR Presisi",
               style = MaterialTheme.typography.bodySmall,
               color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -440,7 +440,7 @@ fun ScanScreen(
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
           ) {
             Column(modifier = Modifier.padding(18.dp)) {
-              // JADISTRUK SMART READER HEADER & SOURCE SELECTOR
+              // OBETSTRUK SMART READER HEADER & SOURCE SELECTOR
               if (smartReaderResult != null) {
                 Card(
                   modifier = Modifier
@@ -472,7 +472,7 @@ fun ScanScreen(
                           )
                         }
                         Text(
-                          text = "JADISTRUK Smart Reader",
+                          text = "OBETSTRUK Smart Reader",
                           style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                           color = MaterialTheme.colorScheme.onSurface
                         )

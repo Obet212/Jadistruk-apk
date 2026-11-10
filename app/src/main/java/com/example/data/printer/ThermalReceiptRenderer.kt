@@ -28,7 +28,7 @@ data class ReceiptDimensions(
 )
 
 /**
- * Mesin Rendering Global Struk JADISTRUK untuk Seluruh Tema (Sederhana, Profesional, Modern).
+ * Mesin Rendering Global Struk OBETSTRUK untuk Seluruh Tema (Sederhana, Profesional, Modern).
  *
  * Mengeliminasi seluruh sumber ketidakstabilan rendering:
  * 1. Ukuran dokumen berbasis standar fisik kertas (720px untuk 58mm, 960px untuk 88mm), bukan layar HP.

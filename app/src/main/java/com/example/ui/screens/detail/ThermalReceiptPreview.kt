@@ -40,7 +40,7 @@ import com.example.data.printer.ReceiptFormatter
 import com.example.data.printer.ThermalReceiptRenderer
 
 /**
- * Mesin rendering pratinjau struk thermal digital JADISTRUK 100% presisi.
+ * Mesin rendering pratinjau struk thermal digital OBETSTRUK 100% presisi.
  *
  * Menggunakan ThermalReceiptRenderer global yang teruji:
  * - Ukuran dokumen berbasis standar fisik gulungan thermal: 58 mm (32 kolom) & 88 mm (48 kolom).

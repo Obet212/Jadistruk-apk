@@ -1,7 +1,7 @@
 package com.example.data.model
 
 data class PrintSettings(
-  val storeName: String = "JADISTRUK POS",
+  val storeName: String = "OBETSTRUK POS",
   val storeAddress: String = "Layanan Cetak Struk Penerima",
   val storePhone: String = "",
   val footerMessage: String = "Terima kasih! Bukti transfer telah diverifikasi.",
