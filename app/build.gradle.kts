@@ -16,8 +16,8 @@ android {
     applicationId = "com.aistudio.jadistruk.rpxm"
     minSdk = 24
     targetSdk = 36
-    versionCode = 14
-    versionName = "2.3"
+    versionCode = 1
+    versionName = "1.0"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }

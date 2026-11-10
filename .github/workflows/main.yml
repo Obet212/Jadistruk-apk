@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build OBETSTRUK APK
 
 on:
   push:
@@ -38,26 +38,21 @@ jobs:
 
     - name: Copy Named APK
       run: |
-        cp app/build/outputs/apk/debug/app-debug.apk OBETSTRUK-2.3.apk
-        cp app/build/outputs/apk/debug/app-debug.apk JadiStruk-2.3.apk
+        cp app/build/outputs/apk/debug/app-debug.apk OBETSTRUK-1.0.apk
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
         name: OBETSTRUK-APK
-        path: |
-          OBETSTRUK-2.3.apk
-          JadiStruk-2.3.apk
+        path: OBETSTRUK-1.0.apk
 
     - name: Publish to GitHub Release
       uses: softprops/action-gh-release@v2
       with:
-        tag_name: v2.3
-        name: OBETSTRUK v2.3
+        tag_name: v1.0
+        name: OBETSTRUK v1.0
         draft: false
         prerelease: false
-        files: |
-          OBETSTRUK-2.3.apk
-          JadiStruk-2.3.apk
+        files: OBETSTRUK-1.0.apk
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
