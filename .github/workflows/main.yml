@@ -1,13 +1,11 @@
-name: Build Android APK
+name: Build ESA STRUK APK
 on:
   push:
     branches: [ "main", "master" ]
     tags:
       - 'v*'
-
 permissions:
   contents: write
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -30,20 +28,29 @@ jobs:
     - name: Build APK
       run: ./gradlew assembleDebug
     - name: Copy Named APK
-      run: cp app/build/outputs/apk/debug/app-debug.apk JadiStruk-2.2.apk
+      run: cp app/build/outputs/apk/debug/app-debug.apk ESASTRUK-2.3.apk
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: JadiStruk-APK
-        path: JadiStruk-2.2.apk
+        name: ESASTRUK-APK
+        path: ESASTRUK-2.3.apk
     - name: Publish to GitHub Release
       uses: softprops/action-gh-release@v2
       with:
-        tag_name: v2.2
-        name: JADISTRUK v2.2
+        tag_name: v2.3
+        name: ESA STRUK v2.3
         draft: false
         prerelease: false
-        files: JadiStruk-2.2.apk
+        make_latest: true
+        files: ESASTRUK-2.3.apk
+        body: |
+          Rilis Terbaru ESA STRUK v2.3 - Cetak Struk Digital & Bukti Transfer
+          
+          Fitur Utama:
+          - Rebranding aplikasi: ESA STRUK
+          - Terima share gambar bukti transfer langsung dari BCA, BRI, Mandiri, BNI, DANA, GoPay, dan QRIS
+          - Ekstraksi OCR cerdas untuk nominal, tanggal, rekening, nama penerima, dan no referensi
+          - Cetak ke printer thermal Bluetooth ESC/POS ukuran 58mm & 80mm
+          - Pratinjau cetak digital yang rapi dan terukur
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
