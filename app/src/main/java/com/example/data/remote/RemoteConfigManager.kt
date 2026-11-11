@@ -3,7 +3,7 @@ package com.example.data.remote
 import android.content.Context
 import android.util.Log
 import com.example.BuildConfig
-import com.example.OBETSTRUKApp
+import com.example.ObetStrukApp
 import com.google.firebase.Firebase
 import com.google.firebase.FirebaseApp
 import com.google.firebase.remoteconfig.FirebaseRemoteConfig
@@ -74,7 +74,7 @@ class RemoteConfigManager(private val context: Context) {
    */
   private fun getRemoteConfigInstance(): FirebaseRemoteConfig? {
     return try {
-      val isReady = OBETSTRUKApp.ensureFirebaseInitialized(context)
+      val isReady = ObetStrukApp.ensureFirebaseInitialized(context)
       if (!isReady || FirebaseApp.getApps(context).isEmpty()) {
         Log.w(TAG, "FirebaseApp belum tersedia, menunda akses Remote Config.")
         return null
