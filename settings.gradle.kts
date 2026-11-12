@@ -22,6 +22,6 @@ dependencyResolutionManagement {
   }
 }
 
-rootProject.name = "JADISTRUK"
+rootProject.name = "CETAKIN"
 
 include(":app")

@@ -13,7 +13,7 @@ android {
   compileSdk { version = release(36) { minorApiLevel = 1 } }
 
   defaultConfig {
-    applicationId = "com.aistudio.jadistruk.rpxm"
+    applicationId = "com.aistudio.cetakin.pkjrwz"
     minSdk = 24
     targetSdk = 36
     versionCode = 1
@@ -22,6 +22,8 @@ android {
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
 
+  // Do not remove or modify these signingConfigs. They are necessary for building, installing,
+  // and updating Android apps in AI Studio.
   signingConfigs {
     create("release") {
       val keystorePath = System.getenv("KEYSTORE_PATH") ?: "${rootDir}/my-upload-key.jks"
@@ -43,9 +45,15 @@ android {
       isCrunchPngs = false
       isMinifyEnabled = false
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+      // Do not remove or modify this signingConfig assignment. It is necessary for Android apps in
+      // AI Studio.
       signingConfig = signingConfigs.getByName("release")
     }
-    debug { signingConfig = signingConfigs.getByName("debugConfig") }
+    debug {
+      // Do not remove or modify this signingConfig assignment. It is necessary for Android apps in
+      // AI Studio.
+      signingConfig = signingConfigs.getByName("debugConfig")
+    }
   }
   compileOptions {
     sourceCompatibility = JavaVersion.VERSION_11
@@ -94,14 +102,13 @@ dependencies {
   implementation(libs.androidx.lifecycle.runtime.compose)
   implementation(libs.androidx.lifecycle.runtime.ktx)
   implementation(libs.androidx.lifecycle.viewmodel.compose)
-  // implementation(libs.androidx.navigation.compose)
+  implementation(libs.androidx.navigation.compose)
   implementation(libs.androidx.room.ktx)
   implementation(libs.androidx.room.runtime)
   implementation(libs.coil.compose)
   implementation(libs.mlkit.text.recognition)
   implementation(libs.converter.moshi)
   implementation(libs.firebase.ai)
-  implementation(libs.firebase.config)
   // Uncomment to use Firestore:
   // implementation(libs.firebase.firestore)
 

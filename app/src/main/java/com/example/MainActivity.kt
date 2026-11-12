@@ -1,238 +1,201 @@
 package com.example
 
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.WifiOff
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.data.remote.AppUpdateStatus
-import com.example.ui.MainApp
-import com.example.ui.screens.update.ForcedUpdateScreen
-import com.example.ui.theme.MyApplicationTheme
-import com.example.ui.viewmodel.ReceiptViewModel
-
-import android.content.Intent
-import android.net.Uri
 import androidx.activity.viewModels
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.Modifier
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import com.example.ui.navigation.Routes
+import com.example.ui.screens.CalibrationScreen
+import com.example.ui.screens.HistoryScreen
+import com.example.ui.screens.HomeScreen
+import com.example.ui.screens.ReceiptPreviewScreen
+import com.example.ui.screens.SettingsScreen
+import com.example.ui.screens.SourceAppsScreen
+import com.example.ui.screens.TemplateEditorScreen
+import com.example.ui.theme.MyApplicationTheme
+import com.example.ui.viewmodel.MainViewModel
 
 class MainActivity : ComponentActivity() {
-  private val viewModel: ReceiptViewModel by viewModels()
 
-  override fun onCreate(savedInstanceState: Bundle?) {
-    super.onCreate(savedInstanceState)
-    // FLAG_SECURE: cegah screenshot, screen recording, dan recent apps preview
-    com.example.data.security.ScreenProtectionManager.applyProtection(this)
-    handleIncomingShareIntent(intent)
-    enableEdgeToEdge()
-    setContent {
-      val settings by viewModel.settings.collectAsState()
-      val appUpdateStatus by viewModel.appUpdateStatus.collectAsState()
-      val isFailureDismissed by viewModel.isUpdateFailureDismissed.collectAsState()
+    private val viewModel: MainViewModel by viewModels()
+    private var navController: NavHostController? = null
 
-      MyApplicationTheme(appTheme = settings.appTheme) {
-        Surface(
-          modifier = Modifier.fillMaxSize(),
-          color = MaterialTheme.colorScheme.background
-        ) {
-          when (val currentStatus = appUpdateStatus) {
-            is AppUpdateStatus.ForcedUpdateRequired -> {
-              // Full Screen Forced Update: tidak dapat dilewati, tanpa tombol tutup, cegah back button
-              ForcedUpdateScreen(updateInfo = currentStatus)
-            }
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
 
-            else -> {
-              // Versi memenuhi syarat atau sedang dicek: pengguna dapat menggunakan aplikasi seperti biasa
-              Box(modifier = Modifier.fillMaxSize()) {
-                MainApp(viewModel = viewModel)
-
-                // Jika internet tidak tersedia / pemeriksaan gagal: jangan mengunci aplikasi, sediakan tombol coba lagi
-                AnimatedVisibility(
-                  visible = currentStatus is AppUpdateStatus.CheckFailed && !isFailureDismissed,
-                  enter = fadeIn() + expandVertically(),
-                  exit = fadeOut() + shrinkVertically(),
-                  modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .statusBarsPadding()
-                    .padding(horizontal = 14.dp, vertical = 8.dp)
+        setContent {
+            MyApplicationTheme {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
                 ) {
-                  UpdateCheckFailureBanner(
-                    errorMessage = (currentStatus as? AppUpdateStatus.CheckFailed)?.errorMessage
-                      ?: "Gagal memeriksa versi aplikasi.",
-                    onRetry = { viewModel.checkForAppUpdate() },
-                    onDismiss = { viewModel.dismissUpdateFailure() }
-                  )
+                    val controller = rememberNavController()
+                    navController = controller
+
+                    AppNavHost(
+                        navController = controller,
+                        viewModel = viewModel
+                    )
+
+                    // Check if intent contains shared image
+                    LaunchedEffect(Unit) {
+                        handleIncomingIntent(intent)
+                    }
                 }
-              }
             }
-          }
         }
-      }
     }
-  }
 
-  override fun onNewIntent(intent: Intent) {
-    super.onNewIntent(intent)
-    setIntent(intent)
-    handleIncomingShareIntent(intent)
-  }
-
-  private fun handleIncomingShareIntent(intent: Intent?) {
-    if (intent == null) return
-    if (intent.action == Intent.ACTION_SEND && intent.type?.startsWith("image/") == true) {
-      val imageUri = intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
-        ?: intent.clipData?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.uri
-      if (imageUri != null) {
-        viewModel.onSharedImageReceived(imageUri)
-      }
-    } else if (intent.action == Intent.ACTION_SEND_MULTIPLE && intent.type?.startsWith("image/") == true) {
-      val uris = intent.getParcelableArrayListExtra<Uri>(Intent.EXTRA_STREAM)
-      val firstUri = uris?.firstOrNull() ?: intent.clipData?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.uri
-      if (firstUri != null) {
-        viewModel.onSharedImageReceived(firstUri)
-      }
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleIncomingIntent(intent)
     }
-  }
 
-  override fun onPause() {
-    super.onPause()
-    // Backup otomatis saat aplikasi ditangguhkan / diminimize (tidak hanya onDestroy)
-    viewModel.triggerAutoBackup("app_lifecycle_pause")
-  }
+    private fun handleIncomingIntent(intent: Intent?) {
+        if (intent == null) return
+        val action = intent.action
+        val type = intent.type
 
-  override fun onStop() {
-    super.onStop()
-    viewModel.triggerAutoBackup("app_lifecycle_stop")
-  }
+        if ((Intent.ACTION_SEND == action || Intent.ACTION_SEND_MULTIPLE == action) && type?.startsWith("image/") == true) {
+            val imageUri: Uri? = if (Intent.ACTION_SEND == action) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
+                } else {
+                    @Suppress("DEPRECATION")
+                    intent.getParcelableExtra(Intent.EXTRA_STREAM)
+                }
+            } else {
+                // SEND_MULTIPLE: take the first image
+                val list = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM, Uri::class.java)
+                } else {
+                    @Suppress("DEPRECATION")
+                    intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM)
+                }
+                list?.firstOrNull()
+            } ?: intent.clipData?.getItemAt(0)?.uri
+
+            if (imageUri != null) {
+                // Try to identify calling package name
+                val callingPkg = detectSourcePackage(intent)
+                viewModel.processIncomingImage(imageUri, callingPkg)
+                navController?.navigate(Routes.PREVIEW) {
+                    launchSingleTop = true
+                }
+            }
+        }
+    }
+
+    private fun detectSourcePackage(intent: Intent): String? {
+        // 1. Check callingPackage
+        callingPackage?.let { return it }
+
+        // 2. Check referrer URI (e.g., android-app://com.bca)
+        try {
+            val referrer = referrer
+            if (referrer != null && referrer.scheme == "android-app") {
+                return referrer.authority ?: referrer.host
+            }
+        } catch (_: Exception) {}
+
+        // 3. Check extra referrer strings
+        val extraRef = intent.getStringExtra(Intent.EXTRA_REFERRER_NAME)
+        if (!extraRef.isNullOrBlank()) {
+            return extraRef.removePrefix("android-app://")
+        }
+
+        return null
+    }
 }
 
-/**
- * Banner non-blocking ketika pemeriksaan versi Firebase Remote Config gagal
- * (misalnya perangkat offline atau koneksi timeout).
- * Menjamin pengguna tetap dapat menggunakan seluruh fitur offline secara normal.
- */
 @Composable
-private fun UpdateCheckFailureBanner(
-  errorMessage: String,
-  onRetry: () -> Unit,
-  onDismiss: () -> Unit,
-  modifier: Modifier = Modifier
+fun AppNavHost(
+    navController: NavHostController,
+    viewModel: MainViewModel
 ) {
-  Surface(
-    modifier = modifier
-      .fillMaxWidth()
-      .shadow(8.dp, RoundedCornerShape(12.dp))
-      .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(12.dp))
-      .testTag("banner_update_check_failure"),
-    shape = RoundedCornerShape(12.dp),
-    color = MaterialTheme.colorScheme.surfaceVariant
-  ) {
-    Row(
-      modifier = Modifier
-        .fillMaxWidth()
-        .padding(horizontal = 12.dp, vertical = 10.dp),
-      verticalAlignment = Alignment.CenterVertically
+    NavHost(
+        navController = navController,
+        startDestination = Routes.HOME
     ) {
-      Box(
-        modifier = Modifier
-          .size(34.dp)
-          .background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(8.dp)),
-        contentAlignment = Alignment.Center
-      ) {
-        Icon(
-          imageVector = Icons.Filled.WifiOff,
-          contentDescription = null,
-          tint = MaterialTheme.colorScheme.primary,
-          modifier = Modifier.size(18.dp)
-        )
-      }
+        composable(Routes.HOME) {
+            HomeScreen(
+                viewModel = viewModel,
+                onNavigateToPreview = { navController.navigate(Routes.PREVIEW) },
+                onNavigateToCalibration = { navController.navigate(Routes.CALIBRATION) },
+                onNavigateToSourceApps = { navController.navigate(Routes.SOURCE_APPS) },
+                onNavigateToTemplateEditor = { navController.navigate(Routes.TEMPLATE_EDITOR) },
+                onNavigateToHistory = { navController.navigate(Routes.HISTORY) },
+                onNavigateToSettings = { navController.navigate(Routes.SETTINGS) }
+            )
+        }
 
-      Spacer(modifier = Modifier.width(10.dp))
+        composable(Routes.PREVIEW) {
+            ReceiptPreviewScreen(
+                viewModel = viewModel,
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToCalibration = { navController.navigate(Routes.CALIBRATION) },
+                onNavigateToTemplateSettings = { navController.navigate(Routes.TEMPLATE_EDITOR) }
+            )
+        }
 
-      Column(modifier = Modifier.weight(1f)) {
-        Text(
-          text = "Mode Offline / Cek Versi Gagal",
-          style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-          color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-          text = errorMessage,
-          style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
-          color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-          maxLines = 2
-        )
-      }
+        composable(Routes.CALIBRATION) {
+            CalibrationScreen(
+                viewModel = viewModel,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
 
-      Spacer(modifier = Modifier.width(8.dp))
+        composable(Routes.SOURCE_APPS) {
+            SourceAppsScreen(
+                viewModel = viewModel,
+                onNavigateBack = { navController.popBackStack() },
+                onOpenTemplate = { sourceApp ->
+                    viewModel.switchActiveSourceApp(sourceApp)
+                    navController.navigate(Routes.TEMPLATE_EDITOR)
+                }
+            )
+        }
 
-      OutlinedButton(
-        onClick = onRetry,
-        shape = RoundedCornerShape(8.dp),
-        contentPadding = ButtonDefaults.TextButtonContentPadding,
-        modifier = Modifier.testTag("btn_retry_update_check")
-      ) {
-        Icon(
-          imageVector = Icons.Filled.Refresh,
-          contentDescription = null,
-          modifier = Modifier.size(14.dp)
-        )
-        Spacer(modifier = Modifier.width(4.dp))
-        Text(
-          text = "Coba Lagi",
-          style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold)
-        )
-      }
+        composable(Routes.TEMPLATE_EDITOR) {
+            TemplateEditorScreen(
+                viewModel = viewModel,
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToCalibration = { navController.navigate(Routes.CALIBRATION) }
+            )
+        }
 
-      IconButton(
-        onClick = onDismiss,
-        modifier = Modifier.size(28.dp)
-      ) {
-        Icon(
-          imageVector = Icons.Filled.Close,
-          contentDescription = "Tutup Peringatan",
-          modifier = Modifier.size(16.dp),
-          tint = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-      }
+        composable(Routes.HISTORY) {
+            HistoryScreen(
+                viewModel = viewModel,
+                onNavigateBack = { navController.popBackStack() },
+                onOpenReceipt = { history ->
+                    viewModel.loadReceiptFromHistory(history)
+                    navController.navigate(Routes.PREVIEW)
+                }
+            )
+        }
+
+        composable(Routes.SETTINGS) {
+            SettingsScreen(
+                viewModel = viewModel,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
     }
-  }
 }

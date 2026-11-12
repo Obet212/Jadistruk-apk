@@ -1,6 +1,6 @@
 {
-  "name": "JADISTRUK",
-  "description": "Aplikasi konversi struk transfer bank dengan deteksi multi-area OCR otomatis dan pencetakan thermal Bluetooth.",
+  "name": "CETAKIN",
+  "description": "Aplikasi penerima Share gambar struk, ekstraksi OCR koordinat cerdas, konfigurasi template per aplikasi sumber, normalisasi printer thermal ESC/POS, dan preview/cetak struk langsung.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

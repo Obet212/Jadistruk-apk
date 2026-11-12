@@ -16,15 +16,4 @@
 local.properties
 .env
 debug.keystore
-/build
-app/build
-APK_DOWNLOAD
-*.apk
-*.zip
-*.dat
-/tmp
-.aistudio
-.build-outputs
-/public
-
-
+.build-outputs/
